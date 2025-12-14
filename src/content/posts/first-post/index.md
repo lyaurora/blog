@@ -5,6 +5,7 @@ description: 这是我通过 VS Code 和 Git 发布的第一篇文章！
 tags: [测试, 生活]
 category: 日常
 draft: false
+image: "./cover.jpg" # 确保 cover.jpg 已经移动到了当前 md 文件的同级目录下
 ---
 
 ## 大家好！
