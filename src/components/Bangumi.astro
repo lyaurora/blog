@@ -1,0 +1,71 @@
+---
+// src/components/Bangumi.astro
+const username = '667804';
+const apiUrl = `https://api.bgm.tv/v0/users/${username}/collections?subject_type=2&type=3&limit=6`;
+
+let watchingList = [];
+let isEmpty = false;
+
+try {
+  const response = await fetch(apiUrl, { headers: { 'User-Agent': 'AstroBlog/1.0' } });
+  if (!response.ok) throw new Error('API Error');
+  const data = await response.json();
+  watchingList = data.data || [];
+  if (watchingList.length === 0) isEmpty = true;
+} catch (e) {
+  isEmpty = true;
+}
+---
+
+<div class="card-base p-4 w-full">
+    <div class="flex items-center justify-between mb-4">
+        <div class="font-bold text-lg text-neutral-900 dark:text-neutral-100 flex items-center gap-2 relative">
+            <div class="w-1 h-4 rounded-md bg-[var(--primary)]"></div>
+            <span class="ml-1">追番中</span>
+        </div>
+        <a href={`https://bgm.tv/anime/list/${username}/do`} target="_blank" 
+           class="text-[var(--primary)] opacity-60 hover:opacity-100 transition-opacity p-1"
+           aria-label="查看更多">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"></path><path d="M12 5l7 7-7 7"></path></svg>
+        </a>
+    </div>
+
+    {!isEmpty && (
+        <div class="grid grid-cols-3 gap-2">
+            {watchingList.map((item: any) => (
+                <a href={`https://bgm.tv/subject/${item.subject.id}`} target="_blank" 
+                   class="group relative block aspect-[2/3] overflow-hidden rounded-md bg-black/5 dark:bg-white/5"
+                   aria-label={item.subject.name_cn || item.subject.name}
+                   >
+                    
+                    <img 
+                        src={item.subject.images.medium || item.subject.images.large} 
+                        class="w-full h-full object-cover transition duration-500 group-hover:scale-110 group-hover:blur-[2px]" 
+                        loading="lazy"
+                        alt={item.subject.name_cn || item.subject.name}
+                    />
+                    
+                    <div class="absolute top-0 right-0 bg-[var(--primary)] text-white text-[9px] px-1.5 py-0.5 rounded-bl-md shadow-sm font-bold opacity-90 z-10">
+                        {item.ep_status}话
+                    </div>
+
+                    <div class="absolute inset-0 flex items-end justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-20">
+                        <div class="w-full bg-black/70 backdrop-blur-sm p-2 text-center transform translate-y-2 group-hover:translate-y-0 transition-transform duration-300">
+                            <p class="text-[10px] text-white font-medium leading-tight line-clamp-2">
+                                {item.subject.name_cn || item.subject.name}
+                            </p>
+                        </div>
+                    </div>
+
+                </a>
+            ))}
+        </div>
+    )}
+    
+    {isEmpty && (
+        <div class="flex flex-col items-center justify-center py-6 text-center select-none">
+            <div class="text-xl mb-2 text-[var(--primary)] opacity-80">_(:з」∠)_</div>
+            <p class="text-xs text-50">最近在偷懒，没有追番捏</p>
+        </div>
+    )}
+</div>
