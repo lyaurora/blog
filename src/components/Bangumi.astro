@@ -1,10 +1,10 @@
 ---
 // src/components/Bangumi.astro
-// 这里只保留 ID 配置，不再进行服务端抓取
 const username = '667804'; 
 ---
 
-<div id="bangumi-widget" class="card-base p-4 w-full min-h-[200px] transition-opacity duration-500 opacity-0">
+<div id="bangumi-widget" class="card-base p-4 w-full min-h-[220px] relative transition-all duration-500">
+    
     <div class="flex items-center justify-between mb-4">
         <div class="font-bold text-lg text-neutral-900 dark:text-neutral-100 flex items-center gap-2 relative">
             <div class="w-1 h-4 rounded-md bg-[var(--primary)]"></div>
@@ -17,22 +17,20 @@ const username = '667804';
         </a>
     </div>
 
-    <div id="bangumi-content" class="grid grid-cols-3 gap-2">
-        <div class="aspect-[2/3] bg-black/5 dark:bg-white/5 rounded-md animate-pulse"></div>
-        <div class="aspect-[2/3] bg-black/5 dark:bg-white/5 rounded-md animate-pulse"></div>
-        <div class="aspect-[2/3] bg-black/5 dark:bg-white/5 rounded-md animate-pulse"></div>
+    <div id="bangumi-content" class="w-full h-full min-h-[150px] flex items-center justify-center">
+        
+        <div class="flex flex-col items-center justify-center gap-3 opacity-60">
+            <div class="w-8 h-8 border-4 border-[var(--primary)]/30 border-t-[var(--primary)] rounded-full animate-spin"></div>
+            <div class="text-xs text-neutral-400 animate-pulse">少女祈祷中...</div>
+        </div>
+
     </div>
 </div>
 
 <script is:inline define:vars={{ username }}>
-    // 这是一个立即执行的异步函数
     (async () => {
-        const widget = document.getElementById('bangumi-widget');
         const container = document.getElementById('bangumi-content');
         
-        // 让组件淡入显示
-        requestAnimationFrame(() => widget.classList.remove('opacity-0'));
-
         try {
             const apiUrl = `https://api.bgm.tv/v0/users/${username}/collections?subject_type=2&type=3&limit=6`;
             const response = await fetch(apiUrl);
@@ -40,61 +38,69 @@ const username = '667804';
             const list = data.data || [];
 
             if (list.length === 0) {
-                // 空状态 HTML
                 container.innerHTML = `
-                <div class="col-span-3 flex flex-col items-center justify-center py-6 text-center select-none">
+                <div class="flex flex-col items-center justify-center py-6 text-center select-none">
                     <div class="text-xl mb-2 text-[var(--primary)] opacity-80">_(:з」∠)_</div>
                     <p class="text-xs text-50">最近在偷懒，没有追番捏</p>
                 </div>`;
-                container.classList.remove('grid', 'grid-cols-3'); // 移除网格布局以居中
                 return;
             }
 
-            // 有数据：生成 HTML 字符串
-            const html = list.map(item => {
-                const subject = item.subject;
-                const title = subject.name_cn || subject.name;
-                const cover = subject.images.medium || subject.images.large;
-                const epStatus = item.ep_status;
-                const link = `https://bgm.tv/subject/${subject.id}`;
+            // 生成图片列表的 HTML
+            const html = `
+            <div class="grid grid-cols-3 gap-2 w-full animate-fade-in-up">
+                ${list.map(item => {
+                    const subject = item.subject;
+                    const title = subject.name_cn || subject.name;
+                    const cover = subject.images.medium || subject.images.large;
+                    const epStatus = item.ep_status;
+                    const link = `https://bgm.tv/subject/${subject.id}`;
 
-                // 这里使用了你之前确认的“完美版”样式 (去除了 title 属性，使用自定义悬停层)
-                return `
-                <a href="${link}" target="_blank" 
-                   class="group relative block aspect-[2/3] overflow-hidden rounded-md bg-black/5 dark:bg-white/5"
-                   aria-label="${title}">
-                    
-                    <img src="${cover}" 
-                         class="w-full h-full object-cover transition duration-500 group-hover:scale-110 group-hover:blur-[2px]" 
-                         loading="lazy" 
-                         alt="${title}" />
-                    
-                    <div class="absolute top-0 right-0 bg-[var(--primary)] text-white text-[9px] px-1.5 py-0.5 rounded-bl-md shadow-sm font-bold opacity-90 z-10">
-                        ${epStatus}话
-                    </div>
-
-                    <div class="absolute inset-0 flex items-end justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-20">
-                        <div class="w-full bg-black/70 backdrop-blur-sm p-2 text-center transform translate-y-2 group-hover:translate-y-0 transition-transform duration-300">
-                            <p class="text-[10px] text-white font-medium leading-tight line-clamp-2">
-                                ${title}
-                            </p>
+                    return `
+                    <a href="${link}" target="_blank" 
+                       class="group relative block aspect-[2/3] overflow-hidden rounded-md bg-black/5 dark:bg-white/5"
+                       aria-label="${title}">
+                        <img src="${cover}" 
+                             class="w-full h-full object-cover transition duration-500 group-hover:scale-110 group-hover:blur-[2px]" 
+                             loading="lazy" 
+                             alt="${title}" />
+                        <div class="absolute top-0 right-0 bg-[var(--primary)] text-white text-[9px] px-1.5 py-0.5 rounded-bl-md shadow-sm font-bold opacity-90 z-10">
+                            ${epStatus}话
                         </div>
-                    </div>
-                </a>
-                `;
-            }).join('');
+                        <div class="absolute inset-0 flex items-end justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-20">
+                            <div class="w-full bg-black/70 backdrop-blur-sm p-2 text-center transform translate-y-2 group-hover:translate-y-0 transition-transform duration-300">
+                                <p class="text-[10px] text-white font-medium leading-tight line-clamp-2">${title}</p>
+                            </div>
+                        </div>
+                    </a>
+                    `;
+                }).join('')}
+            </div>
+            `;
 
-            // 插入 HTML
-            container.innerHTML = html;
+            // 延迟一点点替换内容，让加载动画不那么闪烁
+            // 并添加一个淡入的过渡效果
+            container.style.opacity = '0';
+            setTimeout(() => {
+                container.innerHTML = html;
+                container.style.transition = 'opacity 0.5s ease';
+                container.style.opacity = '1';
+            }, 300);
 
         } catch (e) {
             console.error('Bangumi Fetch Error:', e);
-            // 错误状态
-            container.innerHTML = `
-            <div class="col-span-3 text-center py-4 text-xs text-red-400">
-                数据加载失败 QAQ
-            </div>`;
-            container.classList.remove('grid', 'grid-cols-3');
+            container.innerHTML = `<div class="text-xs text-red-400">数据加载失败 QAQ</div>`;
         }
     })();
 </script>
+
+<style>
+    /* 定义一个简单的淡入上浮动画 */
+    @keyframes fadeInUp {
+        from { opacity: 0; transform: translateY(10px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+    .animate-fade-in-up {
+        animation: fadeInUp 0.5s ease-out forwards;
+    }
+</style>
