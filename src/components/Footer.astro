@@ -25,13 +25,18 @@ const currentYear = new Date().getFullYear();
 <script is:inline>
     function updateUptime() {
         // 你的建站时间
-        const startDate = new Date("2025-12-14T00:00:00"); 
+        // 使用 new Date(year, monthIndex, day) 创建日期
+        // 注意：月份是从 0 开始的，11 代表 12 月
+        const startDate = new Date(2025, 11, 14); 
         
         const now = new Date();
         const diff = now - startDate;
+        const uptimeDisplay = document.getElementById("uptime-display");
+
+        if (!uptimeDisplay) return;
 
         if (diff < 0) {
-            document.getElementById("uptime-display").innerText = "即将诞生";
+            uptimeDisplay.innerText = "即将诞生";
             return;
         }
 
@@ -46,7 +51,7 @@ const currentYear = new Date().getFullYear();
 
         // 保持简洁的格式：2天 05:12:30
         const text = `${days}天 ${h}:${m}:${s}`;
-        document.getElementById("uptime-display").innerText = text;
+        uptimeDisplay.innerText = text;
     }
 
     setInterval(updateUptime, 1000);
