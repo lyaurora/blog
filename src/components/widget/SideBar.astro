@@ -1,9 +1,9 @@
 ---
 import type { MarkdownHeading } from "astro";
+import Bangumi from "../Bangumi.astro"; // 注意路径，因为 SideBar 在 widget 文件夹里，所以要往上跳一级
 import Categories from "./Categories.astro";
 import Profile from "./Profile.astro";
 import Tag from "./Tags.astro";
-import Bangumi from '../Bangumi.astro'; // 注意路径，因为 SideBar 在 widget 文件夹里，所以要往上跳一级
 
 interface Props {
 	class?: string;
