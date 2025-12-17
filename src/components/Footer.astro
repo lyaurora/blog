@@ -19,43 +19,43 @@ const currentYear = new Date().getFullYear();
 <div class="text-xs text-50/80 text-center mt-0.5 flex items-center justify-center gap-1 opacity-80 hover:opacity-100 transition-opacity">
     <span class="scale-90">⏳</span>
     <span>本站已运行</span>
-    <span id="uptime-display" class="font-mono font-bold text-[var(--primary)]">Loading...</span>
+    <uptime-display data-start="2025-12-14" class="font-mono font-bold text-[var(--primary)]">Loading...</uptime-display>
 </div>
 
 <script is:inline>
-    function updateUptime() {
-        // 你的建站时间
-        // 使用 new Date(year, monthIndex, day) 创建日期
-        // 注意：月份是从 0 开始的，11 代表 12 月
-        const startDate = new Date(2025, 11, 14); 
-        
-        const now = new Date();
-        const diff = now - startDate;
-        const uptimeDisplay = document.getElementById("uptime-display");
+    // 使用自定义元素 (Web Component) 解决 Swup 切换和作用域问题
+    if (!customElements.get('uptime-display')) {
+        class UptimeDisplay extends HTMLElement {
+            connectedCallback() {
+                // 安全地解析日期，避免 iOS/Android 兼容性问题
+                const startStr = this.dataset.start || "2025-12-14";
+                const [year, month, day] = startStr.split('-').map(Number);
+                this.startTime = new Date(year, month - 1, day).getTime();
+                
+                this.update();
+                this.timer = setInterval(() => this.update(), 1000);
+            }
 
-        if (!uptimeDisplay) return;
+            disconnectedCallback() {
+                if (this.timer) clearInterval(this.timer);
+            }
 
-        if (diff < 0) {
-            uptimeDisplay.innerText = "即将诞生";
-            return;
+            update() {
+                const now = Date.now();
+                const diff = now - this.startTime;
+                if (diff < 0) {
+                    this.innerText = "即将诞生";
+                    return;
+                }
+                const days = Math.floor(diff / 86400000);
+                const hours = Math.floor((diff % 86400000) / 3600000).toString().padStart(2, '0');
+                const minutes = Math.floor((diff % 3600000) / 60000).toString().padStart(2, '0');
+                const seconds = Math.floor((diff % 60000) / 1000).toString().padStart(2, '0');
+                this.innerText = `${days}天 ${hours}:${minutes}:${seconds}`;
+            }
         }
-
-        const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-        const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-        const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-        const seconds = Math.floor((diff % (1000 * 60)) / 1000);
-
-        const h = hours < 10 ? "0" + hours : hours;
-        const m = minutes < 10 ? "0" + minutes : minutes;
-        const s = seconds < 10 ? "0" + seconds : seconds;
-
-        // 保持简洁的格式：2天 05:12:30
-        const text = `${days}天 ${h}:${m}:${s}`;
-        uptimeDisplay.innerText = text;
+        customElements.define('uptime-display', UptimeDisplay);
     }
-
-    setInterval(updateUptime, 1000);
-    updateUptime();
 </script>
     </div>
 </div>
