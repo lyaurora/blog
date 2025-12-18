@@ -1,0 +1,152 @@
+---
+// src/pages/bangumi.astro
+export const prerender = false;
+
+import Layout from "../layouts/MainGridLayout.astro";
+
+// ==========================================
+// 🔧 配置区域
+// ==========================================
+const USERNAME = "667804"; // 🔴 请替换为你的 Bangumi ID
+const USER_AGENT = "sai/astro-blog-tracker";
+
+// limit: 20
+const collections = [
+	{ label: "正在追", type: 3, limit: 20 },
+	{ label: "补番计划", type: 1, limit: 20 },
+	{ label: "已看完", type: 2, limit: 20 },
+];
+
+const results = await Promise.all(
+	collections.map(async (col) => {
+		try {
+			const url = `https://api.bgm.tv/v0/users/${USERNAME}/collections?subject_type=2&type=${col.type}&limit=${col.limit}`;
+			const res = await fetch(url, { headers: { "User-Agent": USER_AGENT } });
+			const json = await res.json();
+			return { ...col, list: json.data || [] };
+		} catch (error) {
+			console.error(`Fetch error for type ${col.type}:`, error);
+			return { ...col, list: [] };
+		}
+	}),
+);
+---
+
+<Layout title="我的番剧库">
+  
+  <div class="max-w-7xl mx-auto px-4 min-h-screen pt-24 pb-12">
+    
+    {/* 页面大标题 */}
+    <div class="mb-8 px-2">
+      <div class="flex items-end justify-between border-b-2 border-gray-100 dark:border-neutral-800 pb-2">
+        <div>
+          <h1 class="text-2xl font-bold text-gray-900 dark:text-white tracking-tight">
+            番剧收藏
+          </h1>
+          <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
+            Synced from Bangumi
+          </p>
+        </div>
+        <div class="text-right hidden sm:block">
+          <div class="text-3xl font-bold text-gray-400 dark:text-neutral-600">
+            {results.reduce((acc, cur) => acc + cur.list.length, 0)}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    {/* 列表区域 */}
+    {results.map((group) => {
+      if (group.list.length === 0) return null;
+
+      return (
+        <div class="mb-12">
+          {/* 分类标题：保持侧边栏同款样式 */}
+          <div class="flex items-center gap-2 mb-4 px-2">
+            
+            {/* 侧边栏风格装饰条：w-1 h-4 rounded-md + 主题色 */}
+            <div class="w-1 h-4 rounded-md shrink-0" style="background-color: var(--primary);"></div>
+            
+            <h2 class="text-lg font-bold text-gray-800 dark:text-gray-200">
+              {group.label}
+            </h2>
+            
+            <span class="text-xs font-mono text-gray-400 bg-gray-100 dark:bg-neutral-800 px-2 py-0.5 rounded-md ml-1">
+              {group.list.length}
+            </span>
+          </div>
+
+          <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
+            {group.list.map((item: any) => {
+              const subject = item.subject;
+              const title = subject.name_cn || subject.name;
+              const cover = subject.images.large || subject.images.common;
+              const url = `https://bgm.tv/subject/${subject.id}`;
+              const progressText = `${item.ep_status} / ${subject.eps || '?'}`;
+              const publicScore = subject.score; 
+              const myScore = item.rate || 0;
+
+              return (
+                <a href={url} target="_blank" rel="noopener noreferrer" 
+                   class="group relative block w-full aspect-[2/3] rounded-xl overflow-hidden shadow-md hover:shadow-2xl transition-all duration-300 hover:-translate-y-2 bg-gray-200 dark:bg-neutral-800 will-change-transform">
+                  
+                  <img 
+                    src={cover} 
+                    alt={title} 
+                    class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                    loading="lazy"
+                  />
+                  
+                  <div class="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-end p-4">
+                    
+                    <div class="transform translate-y-4 group-hover:translate-y-0 transition-transform duration-300 will-change-transform">
+                      <h3 class="text-white font-bold text-lg leading-tight mb-2 line-clamp-2 drop-shadow-md">
+                        {title}
+                      </h3>
+                      
+                      <div class="flex items-center justify-between text-xs text-gray-300 antialiased">
+                        <span class="bg-white/20 px-2 py-0.5 rounded border border-white/10">
+                           {progressText}
+                        </span>
+                        
+                        {myScore > 0 ? (
+                          /* 🟢 修复点：改回 text-yellow-400，去掉 style 主题色 */
+                          <span class="text-yellow-400 font-bold flex items-center gap-1 drop-shadow-md bg-white/10 px-1.5 py-0.5 rounded">
+                            ★ {myScore}
+                          </span>
+                        ) : (
+                          <span class="text-gray-400">未评分</span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="absolute top-2 left-2 bg-black/60 backdrop-blur-md text-white text-[10px] px-2 py-1 rounded-md border border-white/10 shadow-sm z-10 antialiased">
+                    {item.ep_status}话
+                  </div>
+
+                  {publicScore && (
+                     <div class="absolute top-2 right-2 flex items-center gap-1 z-10
+                                 bg-neutral-900/80 backdrop-blur-md
+                                 text-[10px] text-white
+                                 px-2 py-0.5 rounded-md
+                                 shadow-sm border border-white/10 antialiased">
+                       <span class="text-neutral-400 text-[8px] uppercase tracking-wider font-semibold">Bgm</span>
+                       <span class="font-bold text-yellow-400">{publicScore}</span>
+                     </div>
+                  )}
+                </a>
+              )
+            })}
+          </div>
+        </div>
+      );
+    })}
+
+    {results.every(g => g.list.length === 0) && (
+      <div class="text-center py-20 text-gray-500">
+        <p>似乎无法连接到 Bangumi 或列表为空...</p>
+      </div>
+    )}
+  </div>
+</Layout>

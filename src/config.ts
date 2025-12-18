@@ -43,6 +43,11 @@ export const navBarConfig: NavBarConfig = {
 	links: [
 		LinkPreset.Home,
 		LinkPreset.Archive,
+		{
+			name: "番剧", // 导航栏显示的文字
+			url: "/bangumi/", // 对应 src/pages/bangumi.astro
+			external: false, // false 表示是站内链接，跳转更顺滑
+		},
 		LinkPreset.About,
 		{
 			name: "GitHub",

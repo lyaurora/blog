@@ -1,29 +1,31 @@
 ---
 // src/components/Bangumi.astro
-const username = "667804";
+const username = "667804"; // 🔴 你的 ID
 ---
 
 <div id="bangumi-widget" class="card-base p-4 w-full min-h-[220px] relative transition-all duration-500">
     
     <div class="flex items-center justify-between mb-4">
         <div class="font-bold text-lg text-neutral-900 dark:text-neutral-100 flex items-center gap-2 relative">
-            <div class="w-1 h-4 rounded-md bg-[var(--primary)]"></div>
-            <span class="ml-1">追番中</span>
+            <div class="w-1 h-4 rounded-md shrink-0" style="background-color: var(--primary);"></div>
+            <span class="ml-1">追番</span>
         </div>
-        <a href={`https://bgm.tv/anime/list/${username}/do`} target="_blank" 
-           class="text-[var(--primary)] opacity-60 hover:opacity-100 transition-opacity p-1"
+        
+        {/* 🟢 修改重点：链接指向内部页面 /bangumi */}
+        {/* 去掉了 target="_blank"，实现站内平滑跳转 */}
+        <a href="/bangumi/" 
+           class="opacity-60 hover:opacity-100 transition-opacity p-1"
+           style="color: var(--primary);"
            aria-label="查看更多">
             <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"></path><path d="M12 5l7 7-7 7"></path></svg>
         </a>
     </div>
 
     <div id="bangumi-content" class="w-full h-full min-h-[150px] flex items-center justify-center">
-        
         <div class="flex flex-col items-center justify-center gap-3 opacity-60">
-            <div class="w-8 h-8 border-4 border-[var(--primary)]/30 border-t-[var(--primary)] rounded-full animate-spin"></div>
+            <div class="w-8 h-8 border-4 border-t-transparent rounded-full animate-spin" style="border-color: var(--primary); border-top-color: transparent; opacity: 0.3;"></div>
             <div class="text-xs text-neutral-400 animate-pulse">少女祈祷中...</div>
         </div>
-
     </div>
 </div>
 
@@ -40,7 +42,7 @@ const username = "667804";
             if (list.length === 0) {
                 container.innerHTML = `
                 <div class="flex flex-col items-center justify-center py-6 text-center select-none">
-                    <div class="text-xl mb-2 text-[var(--primary)] opacity-80">_(:з」∠)_</div>
+                    <div class="text-xl mb-2 opacity-80" style="color: var(--primary);">_(:з」∠)_</div>
                     <p class="text-xs text-50">最近在偷懒，没有追番捏</p>
                 </div>`;
                 return;
@@ -58,31 +60,31 @@ const username = "667804";
                     return `
                     <a href="${link}" target="_blank" 
                        class="
-                         group relative block aspect-[2/3]
-                         /* 去裁剪化架构：保留无闪烁的动画逻辑 */
-                         transition-transform duration-500 ease-[cubic-bezier(0.34,1.56,0.64,1)]
-                         hover:scale-105 hover:z-50 hover:-translate-y-1
-                         transform-gpu will-change-transform
-                       "
+                          group relative block aspect-[2/3]
+                          rounded-md overflow-hidden 
+                          z-0
+                          transition-all duration-300 
+                          hover:-translate-y-1 hover:shadow-lg
+                          will-change-transform
+                        "
+                       style="-webkit-mask-image: -webkit-radial-gradient(white, black);"
                        aria-label="${title}">
                         
-                        <div class="absolute inset-0 bg-neutral-900 rounded-md shadow-2xl"></div>
+                        <div class="absolute inset-0 bg-neutral-900"></div>
 
                         <img src="${cover}" 
-                             class="absolute inset-0 w-full h-full object-cover rounded-md" 
+                             class="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" 
                              style="backface-visibility: hidden;"
                              loading="lazy" 
                              alt="${title}" />
                         
-                        <div class="absolute inset-0 rounded-md ring-1 ring-inset ring-black/10 z-20 pointer-events-none"></div>
+                        <div class="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none z-10"></div>
 
-                        <div class="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-md pointer-events-none z-10"></div>
-
-                        <div class="absolute top-0 right-0 bg-[var(--primary)] text-white text-[9px] px-1.5 py-0.5 rounded-bl-md rounded-tr-md shadow-sm font-bold opacity-90 z-30">
+                        <div class="absolute top-0 right-0 text-white text-[9px] px-1.5 py-0.5 rounded-bl-md rounded-tr-md shadow-sm font-bold opacity-90 z-30" style="background-color: var(--primary);">
                             ${epStatus}话
                         </div>
 
-                        <div class="absolute inset-x-0 bottom-0 p-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-30 text-center">
+                        <div class="absolute inset-x-0 bottom-0 p-2 opacity-0 group-hover:opacity-100 z-30 text-center transform translate-y-2 group-hover:translate-y-0 transition-all duration-300">
                             <p class="text-[9px] tracking-tight text-white font-medium leading-tight line-clamp-2 drop-shadow-md">${title}</p>
                         </div>
                     </a>
@@ -100,10 +102,9 @@ const username = "667804";
 
         } catch (e) {
             console.error('Bangumi Fetch Error:', e);
-            // 🔴 修正点 2：错误提示改回主题色，并优化排版
             container.innerHTML = `
             <div class="flex flex-col items-center justify-center h-full select-none">
-                <div class="text-xs text-[var(--primary)] opacity-80 font-bold">加载失败 QAQ</div>
+                <div class="text-xs opacity-80 font-bold" style="color: var(--primary);">加载失败 QAQ</div>
                 <div class="text-[10px] text-neutral-400 mt-1 scale-90">请检查网络配置</div>
             </div>`;
         }
@@ -111,7 +112,6 @@ const username = "667804";
 </script>
 
 <style>
-    /* 定义一个简单的淡入上浮动画 */
     @keyframes fadeInUp {
         from { opacity: 0; transform: translateY(10px); }
         to { opacity: 1; transform: translateY(0); }
