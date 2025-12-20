@@ -4,6 +4,32 @@ export const prerender = false;
 
 import Layout from "../layouts/MainGridLayout.astro";
 
+// ------------------------------------------
+// ✅ 新增：添加缓存控制
+// ------------------------------------------
+// 告诉 CDN：缓存这个页面 3600 秒（1小时）。
+// 在这 1 小时内，无论多少人访问，都不会重新请求 Bangumi API。
+Astro.response.headers.set(
+	"Cache-Control",
+	"public, max-age=0, s-maxage=3600, stale-while-revalidate=604800",
+);
+
+// ------------------------------------------
+// ✅ 2. 获取精确到秒的当前时间
+// ------------------------------------------
+const lastUpdateDate = new Date()
+	.toLocaleString("zh-CN", {
+		year: "numeric", // 年
+		month: "2-digit", // 月
+		day: "2-digit", // 日
+		hour: "2-digit", // 时
+		minute: "2-digit", // 分
+		second: "2-digit", // 秒 (新增)
+		hour12: false, // 强制 24 小时制 (14:00 而不是 2:00 PM)
+		timeZone: "Asia/Shanghai", // 锁定北京时间
+	})
+	.replace(/\//g, "-"); // 把 2025/12/20 格式化为 2025-12-20
+
 // ==========================================
 // 🔧 配置区域
 // ==========================================
@@ -44,7 +70,10 @@ const results = await Promise.all(
             番剧收藏
           </h1>
           <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
-            Synced from Bangumi
+            Synced from Bangumi •
+            <span class="font-mono text-gray-400 dark:text-gray-500">
+              {lastUpdateDate}
+            </span>
           </p>
         </div>
         <div class="text-right hidden sm:block">
