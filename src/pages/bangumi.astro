@@ -11,7 +11,7 @@ import Layout from "../layouts/MainGridLayout.astro";
 // 在这 1 小时内，无论多少人访问，都不会重新请求 Bangumi API。
 Astro.response.headers.set(
 	"Cache-Control",
-	"public, max-age=0, s-maxage=3600, stale-while-revalidate=604800",
+	"public, max-age=0, s-maxage=10, stale-while-revalidate=604800",
 );
 
 // ------------------------------------------
