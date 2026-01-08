@@ -37,6 +37,7 @@ export const siteConfig: SiteConfig = {
 		//   sizes: '32x32',              // (Optional) Size of the favicon, set only if you have favicons of different sizes
 		// }
 	],
+	bangumiUser: "667804", // 🔴 你的 Bangumi ID
 };
 
 export const navBarConfig: NavBarConfig = {

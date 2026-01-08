@@ -1,6 +1,8 @@
 ---
 // src/components/Bangumi.astro
-const username = "667804"; // 🔴 你的 ID
+import { siteConfig } from "../config";
+
+const username = siteConfig.bangumiUser;
 ---
 
 <div id="bangumi-widget" class="card-base p-4 w-full min-h-[220px] relative transition-all duration-500">

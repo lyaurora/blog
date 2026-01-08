@@ -11,7 +11,7 @@ import Layout from "../layouts/MainGridLayout.astro";
 // 在这 1 小时内，无论多少人访问，都不会重新请求 Bangumi API。
 Astro.response.headers.set(
 	"Cache-Control",
-	"public, max-age=0, s-maxage=600, stale-while-revalidate=604800",
+	"public, max-age=0, s-maxage=3600, stale-while-revalidate=604800",
 );
 
 // ------------------------------------------
@@ -33,26 +33,62 @@ const lastUpdateDate = new Date()
 // ==========================================
 // 🔧 配置区域
 // ==========================================
-const USERNAME = "667804"; // 🔴 请替换为你的 Bangumi ID
+import { siteConfig } from "../config";
+
+const USERNAME = siteConfig.bangumiUser;
 const USER_AGENT = "sai/astro-blog-tracker";
 
+// ==========================================
+// 📝 类型定义
+// ==========================================
+interface BangumiSubject {
+	id: number;
+	name: string;
+	name_cn: string;
+	images: {
+		large: string;
+		common: string;
+		medium: string;
+		small: string;
+		grid: string;
+	};
+	eps: number;
+	score: number;
+}
+
+interface BangumiItem {
+	subject: BangumiSubject;
+	ep_status: number;
+	rate: number;
+}
+
+interface BangumiCollection {
+	label: string;
+	type: number;
+	limit: number;
+	list: BangumiItem[];
+}
+
 // limit: 20
-const collections = [
+const collections: Partial<BangumiCollection>[] = [
 	{ label: "正在追", type: 3, limit: 20 },
 	{ label: "补番计划", type: 1, limit: 20 },
 	{ label: "已看完", type: 2, limit: 20 },
 ];
 
-const results = await Promise.all(
+const results: BangumiCollection[] = await Promise.all(
 	collections.map(async (col) => {
 		try {
+			if (!USERNAME) {
+				return { ...col, list: [] } as BangumiCollection;
+			}
 			const url = `https://api.bgm.tv/v0/users/${USERNAME}/collections?subject_type=2&type=${col.type}&limit=${col.limit}`;
 			const res = await fetch(url, { headers: { "User-Agent": USER_AGENT } });
 			const json = await res.json();
-			return { ...col, list: json.data || [] };
+			return { ...col, list: json.data || [] } as BangumiCollection;
 		} catch (error) {
 			console.error(`Fetch error for type ${col.type}:`, error);
-			return { ...col, list: [] };
+			return { ...col, list: [] } as BangumiCollection;
 		}
 	}),
 );
@@ -106,7 +142,7 @@ const results = await Promise.all(
           </div>
 
           <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
-            {group.list.map((item: any) => {
+            {group.list.map((item: BangumiItem) => {
               const subject = item.subject;
               const title = subject.name_cn || subject.name;
               const cover = subject.images.large || subject.images.common;
