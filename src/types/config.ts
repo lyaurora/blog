@@ -37,6 +37,13 @@ export type SiteConfig = {
 
 	bangumiUser?: string;
 
+	music?: {
+		enable: boolean;
+		id: string; // Netease playlist ID
+		server?: "netease" | "tencent" | "kugou" | "xiami" | "baidu";
+		type?: "playlist" | "song" | "album" | "artist";
+	};
+
 	favicon: Favicon[];
 };
 

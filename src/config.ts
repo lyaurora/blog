@@ -38,6 +38,12 @@ export const siteConfig: SiteConfig = {
 		// }
 	],
 	bangumiUser: "667804", // 🔴 你的 Bangumi ID
+	music: {
+		enable: true,
+		id: "9327502763", // 默认歌单 ID
+		server: "netease",
+		type: "playlist",
+	},
 };
 
 export const navBarConfig: NavBarConfig = {

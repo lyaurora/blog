@@ -1,2 +1,10 @@
-/// <reference types="astro/client" />
-/// <reference path="../.astro/types.d.ts" />
+declare module "colorthief" {
+	export default class ColorThief {
+		getColor(sourceImage: HTMLImageElement | null): [number, number, number];
+		getPalette(
+			sourceImage: HTMLImageElement | null,
+			colorCount?: number,
+			quality?: number,
+		): [number, number, number][];
+	}
+}
