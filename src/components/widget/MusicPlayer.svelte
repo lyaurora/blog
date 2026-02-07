@@ -1,25 +1,23 @@
 <script lang="ts">
-import { onMount, tick } from "svelte";
-import { fade, fly, scale, slide } from "svelte/transition";
 import ColorThief from "colorthief";
+import { onMount, tick } from "svelte";
+import { fade, slide } from "svelte/transition";
 import { siteConfig } from "@/config";
 
 interface Song {
-    title: string;
-    author: string;
-    url: string;
-    pic: string;
-    lrc?: string;
+	title: string;
+	author: string;
+	url: string;
+	pic: string;
+	lrc?: string;
 }
-
-import { PAGE_WIDTH } from "@/constants/constants";
 
 // 状态
 let isExpanded = false;
 let isPlaying = false;
 let showPlaylist = false;
 let showModeTooltip = false;
-let playMode: 'order' | 'loop' | 'shuffle' = 'order';
+let playMode: "order" | "loop" | "shuffle" = "order";
 let playlist: Song[] = [];
 let currentIndex = 0;
 
@@ -27,7 +25,7 @@ let currentIndex = 0;
 let progress = 0;
 let duration = 0;
 let currentTime = 0;
-let isDragging = false; 
+let isDragging = false;
 
 let volume = 0.5;
 let audio: HTMLAudioElement;
@@ -38,272 +36,279 @@ let colorCache: Record<string, [number, number, number]> = {};
 
 // 配置
 const musicConfig = siteConfig.music || {
-    enable: false,
-    id: "3778678",
-    server: "netease",
-    type: "playlist",
+	enable: false,
+	id: "3778678",
+	server: "netease",
+	type: "playlist",
 };
 
-const modeNames = { 
-    order: '顺序播放', 
-    loop: '单曲循环', 
-    shuffle: '随机播放' 
+const modeNames = {
+	order: "顺序播放",
+	loop: "单曲循环",
+	shuffle: "随机播放",
 };
 
 // 格式化时间
 function formatTime(seconds: number) {
-    if (isNaN(seconds)) return "0:00";
-    const min = Math.floor(seconds / 60);
-    const sec = Math.floor(seconds % 60);
-    return `${min}:${sec < 10 ? "0" + sec : sec}`;
+	if (isNaN(seconds)) return "0:00";
+	const min = Math.floor(seconds / 60);
+	const sec = Math.floor(seconds % 60);
+	return `${min}:${sec < 10 ? "0" + sec : sec}`;
 }
 
 async function fetchPlaylist() {
-    if (!musicConfig.enable) return;
-    try {
-        const api = musicConfig.api || "https://api.i-meto.com/meting/api";
-        const res = await fetch(
-            `${api}?server=${musicConfig.server}&type=${musicConfig.type}&id=${musicConfig.id}&r=${Math.random()}`,
-        );
-        const data = await res.json();
-        // API 返回歌曲数组
-        playlist = data.map((item: any) => {
-            let pic = item.pic || "";
-            if (pic) {
-                pic = pic.replace(/^http:/, "https:");
-                pic += pic.includes("?") ? "&param=300y300" : "?param=300y300";
-            }
-            return {
-                title: item.title,
-                author: item.author,
-                url: item.url,
-                pic: pic,
-                lrc: item.lrc,
-            };
-        });
-    } catch (e) {
-        console.error("Failed to fetch playlist", e);
-    }
+	if (!musicConfig.enable) return;
+	try {
+		const api = musicConfig.api || "https://api.i-meto.com/meting/api";
+		const res = await fetch(
+			`${api}?server=${musicConfig.server}&type=${musicConfig.type}&id=${musicConfig.id}&r=${Math.random()}`,
+		);
+		const data = await res.json();
+		// API 返回歌曲数组
+		playlist = data.map((item: any) => {
+			let pic = item.pic || "";
+			if (pic) {
+				pic = pic.replace(/^http:/, "https:");
+				pic += pic.includes("?") ? "&param=300y300" : "?param=300y300";
+			}
+			return {
+				title: item.title,
+				author: item.author,
+				url: item.url,
+				pic: pic,
+				lrc: item.lrc,
+			};
+		});
+	} catch (e) {
+		console.error("Failed to fetch playlist", e);
+	}
 }
 
 function extractColor() {
-    if (!currentSong || !currentSong.pic) return;
-    
-    // 优先检查缓存
-    if (colorCache[currentSong.pic]) {
-        primaryColor = colorCache[currentSong.pic];
-        return;
-    }
+	if (!currentSong || !currentSong.pic) return;
 
-    if (!coverImg || !colorThief) return;
-    
-    const getColor = () => {
-        try {
-            const color = colorThief.getColor(coverImg);
-            primaryColor = color;
-            colorCache[currentSong.pic] = color;
-        } catch (e) {
-             console.warn("Color extraction failed", e);
-        }
-    }
+	// 优先检查缓存
+	if (colorCache[currentSong.pic]) {
+		primaryColor = colorCache[currentSong.pic];
+		return;
+	}
 
-    if (coverImg.complete) {
-        getColor();
-    } else {
-        coverImg.onload = getColor; // 如果不再依赖 'load' 事件而是检查 complete，这里可能是多余的
-    }
+	if (!coverImg || !colorThief) return;
+
+	const getColor = () => {
+		try {
+			const color = colorThief.getColor(coverImg);
+			primaryColor = color;
+			colorCache[currentSong.pic] = color;
+		} catch (e) {
+			console.warn("Color extraction failed", e);
+		}
+	};
+
+	if (coverImg.complete) {
+		getColor();
+	} else {
+		coverImg.onload = getColor; // 如果不再依赖 'load' 事件而是检查 complete，这里可能是多余的
+	}
 }
 
 function togglePlay() {
-    if (!audio) return;
-    if (isPlaying) {
-        audio.pause();
-    } else {
-        audio.play();
-    }
-    isPlaying = !isPlaying;
+	if (!audio) return;
+	if (isPlaying) {
+		audio.pause();
+	} else {
+		audio.play();
+	}
+	isPlaying = !isPlaying;
 }
 
+let tooltipTimeout: number;
+
 function switchPlayMode() {
-    if (playMode === 'order') playMode = 'loop';
-    else if (playMode === 'loop') playMode = 'shuffle';
-    else playMode = 'order';
+	if (playMode === "order") playMode = "loop";
+	else if (playMode === "loop") playMode = "shuffle";
+	else playMode = "order";
+
+	// Mobile fix: Show tooltip briefly then hide
+	showModeTooltip = true;
+	if (tooltipTimeout) clearTimeout(tooltipTimeout);
+	tooltipTimeout = setTimeout(() => {
+		showModeTooltip = false;
+	}, 2000);
 }
 
 function nextSong() {
-    if (playMode === 'shuffle') {
-        // 随机播放：选择随机歌曲
-        isPlaying = true;
-    } else if (playMode === 'loop') {
-        // 单曲循环：下一首（手动点击覆盖单曲循环逻辑）
-        isPlaying = true;
-    }
-    
-    if (playMode === 'shuffle') {
-        let newIndex =  Math.floor(Math.random() * playlist.length);
-        while(newIndex === currentIndex && playlist.length > 1) {
-            newIndex = Math.floor(Math.random() * playlist.length);
-        }
-        currentIndex = newIndex;
-    } else {
-        currentIndex = (currentIndex + 1) % playlist.length;
-    }
-    isPlaying = true;
+	if (playMode === "shuffle") {
+		// 随机播放：选择随机歌曲
+		isPlaying = true;
+	} else if (playMode === "loop") {
+		// 单曲循环：下一首（手动点击覆盖单曲循环逻辑）
+		isPlaying = true;
+	}
+
+	if (playMode === "shuffle") {
+		let newIndex = Math.floor(Math.random() * playlist.length);
+		while (newIndex === currentIndex && playlist.length > 1) {
+			newIndex = Math.floor(Math.random() * playlist.length);
+		}
+		currentIndex = newIndex;
+	} else {
+		currentIndex = (currentIndex + 1) % playlist.length;
+	}
+	isPlaying = true;
 }
 
 function handleAutoNext() {
-    // 歌曲结束时调用
-    if (playMode === 'loop') {
-        // 单曲循环
-        audio.currentTime = 0;
-        audio.play();
-    } else {
-        nextSong();
-    }
+	// 歌曲结束时调用
+	if (playMode === "loop") {
+		// 单曲循环
+		audio.currentTime = 0;
+		audio.play();
+	} else {
+		nextSong();
+	}
 }
 
 function prevSong() {
-    currentIndex = (currentIndex - 1 + playlist.length) % playlist.length;
-    isPlaying = true;
+	currentIndex = (currentIndex - 1 + playlist.length) % playlist.length;
+	isPlaying = true;
 }
 
 // 拖拽逻辑
 function handleSeekStart(e: MouseEvent | TouchEvent) {
-    isDragging = true;
-    handleSeekMove(e);
+	isDragging = true;
+	handleSeekMove(e);
 }
 
 function handleSeekMove(e: MouseEvent | TouchEvent) {
-    if (!isDragging) return;
-    const bar = document.getElementById('progress-bar-container');
-    if (!bar) return;
-    const rect = bar.getBoundingClientRect();
-    const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
-    let percent = (clientX - rect.left) / rect.width;
-    percent = Math.max(0, Math.min(1, percent));
-    progress = percent * 100;
-    // 仅更新当前时间显示文本，暂不跳转音频以避免卡顿
-    // 但我们需要 currentTime 用于显示
-    currentTime = percent * duration;
+	if (!isDragging) return;
+	const bar = document.getElementById("progress-bar-container");
+	if (!bar) return;
+	const rect = bar.getBoundingClientRect();
+	const clientX = "touches" in e ? e.touches[0].clientX : e.clientX;
+	let percent = (clientX - rect.left) / rect.width;
+	percent = Math.max(0, Math.min(1, percent));
+	progress = percent * 100;
+	// 仅更新当前时间显示文本，暂不跳转音频以避免卡顿
+	// 但我们需要 currentTime 用于显示
+	currentTime = percent * duration;
 }
 
 function handleSeekEnd(e: MouseEvent | TouchEvent) {
-    if (!isDragging) return;
-    isDragging = false;
-    const bar = document.getElementById('progress-bar-container');
-    if (!bar || !audio) return;
-    
-    // 最终跳转
-    // 我们已经在 move 中更新了 progress，所以只需从中计算时间
-    audio.currentTime = (progress / 100) * duration;
+	if (!isDragging) return;
+	isDragging = false;
+	const bar = document.getElementById("progress-bar-container");
+	if (!bar || !audio) return;
+
+	// 最终跳转
+	// 我们已经在 move 中更新了 progress，所以只需从中计算时间
+	audio.currentTime = (progress / 100) * duration;
 }
 
 function toggleExpand() {
-    isExpanded = !isExpanded;
-    if (!isExpanded) showPlaylist = false;
+	isExpanded = !isExpanded;
+	if (!isExpanded) showPlaylist = false;
 }
 
 function handleClickOutside(event: MouseEvent) {
-    if (isExpanded && !(event.target as Element).closest('.music-player-container')) {
-        isExpanded = false;
-        showPlaylist = false;
-    }
+	if (
+		isExpanded &&
+		!(event.target as Element).closest(".music-player-container")
+	) {
+		isExpanded = false;
+		showPlaylist = false;
+	}
 }
 
 function playSong(index: number) {
-    currentIndex = index;
-    isPlaying = true;
+	currentIndex = index;
+	isPlaying = true;
 }
-
-
-
 
 let playerStyle = "left: 1rem;"; // 默认安全位置
 
 function calculatePosition() {
-    const mainGrid = document.getElementById('main-grid');
-    if (!mainGrid) return;
+	const mainGrid = document.getElementById("main-grid");
+	if (!mainGrid) return;
 
+	const gridRect = mainGrid.getBoundingClientRect();
+	const playerWidth = 240; // 宽度 60 = 15rem = 240px
+	const gap = 16; // 1rem
 
-    const gridRect = mainGrid.getBoundingClientRect();
-    const playerWidth = 240; // 宽度 60 = 15rem = 240px
-    const gap = 16; // 1rem
-    
-    const computedStyle = window.getComputedStyle(mainGrid);
-    const paddingLeft = parseFloat(computedStyle.paddingLeft) || 0;
-    
-    // 侧边栏内容的视觉左边缘
-    const sidebarLeftEdge = gridRect.left + paddingLeft;
-    
-    // 计算播放器应位于侧边栏左侧的位置
-    const targetLeft = sidebarLeftEdge - playerWidth - gap;
-    
-    if (targetLeft >= 2) {
-         playerStyle = `left: ${targetLeft}px;`;
-    } else {
-         // 如果空间极窄（例如 targetLeft 为 -2px），
-         // 我们将其强制固定在距屏幕边缘 2px 处以防被遮挡。
-         // 这可能会略微减小间距（例如 14px 而非 16px），
-         // 但优先保证播放器可见且“大致”对齐。
-         // 如果 targetLeft 为负数（超窄屏），回退到左下角（1rem）。
-         if (targetLeft > -50) {
-             playerStyle = `left: 2px;`;
-         } else {
-             playerStyle = `left: 1rem;`;
-         }
-    }
+	const computedStyle = window.getComputedStyle(mainGrid);
+	const paddingLeft = Number.parseFloat(computedStyle.paddingLeft) || 0;
+
+	// 侧边栏内容的视觉左边缘
+	const sidebarLeftEdge = gridRect.left + paddingLeft;
+
+	// 计算播放器应位于侧边栏左侧的位置
+	const targetLeft = sidebarLeftEdge - playerWidth - gap;
+
+	if (targetLeft >= 2) {
+		playerStyle = `left: ${targetLeft}px;`;
+	} else {
+		// 如果空间极窄（例如 targetLeft 为 -2px），
+		// 我们将其强制固定在距屏幕边缘 2px 处以防被遮挡。
+		// 这可能会略微减小间距（例如 14px 而非 16px），
+		// 但优先保证播放器可见且“大致”对齐。
+		// 如果 targetLeft 为负数（超窄屏），回退到左下角（1rem）。
+		if (targetLeft > -50) {
+			playerStyle = "left: 2px;";
+		} else {
+			playerStyle = "left: 1rem;";
+		}
+	}
 }
 
 onMount(async () => {
-    colorThief = new ColorThief();
-    window.addEventListener('click', handleClickOutside);
-    window.addEventListener('mousemove', handleSeekMove);
-    window.addEventListener('mouseup', handleSeekEnd);
-    window.addEventListener('touchmove', handleSeekMove);
-    window.addEventListener('touchend', handleSeekEnd);
-    
-    // 定位逻辑
-    const observer = new ResizeObserver(() => {
-        window.requestAnimationFrame(calculatePosition);
-    });
-    observer.observe(document.body);
-    
-    // 延迟初始计算
-    setTimeout(calculatePosition, 100);
-    setTimeout(calculatePosition, 500);
-    
-    await fetchPlaylist();
-    
-    if (audio) {
-        audio.volume = volume;
-        audio.addEventListener("timeupdate", () => {
-            if (!isDragging) {
-                currentTime = audio.currentTime;
-                duration = audio.duration || 0;
-                progress = (currentTime / duration) * 100;
-            }
-        });
-        audio.addEventListener("ended", handleAutoNext);
-        audio.addEventListener("play", () => isPlaying = true);
-        audio.addEventListener("pause", () => isPlaying = false);
-    }
-    
-    return () => {
-        window.removeEventListener('click', handleClickOutside);
-        window.removeEventListener('mousemove', handleSeekMove);
-        window.removeEventListener('mouseup', handleSeekEnd);
-        window.removeEventListener('touchmove', handleSeekMove);
-        window.removeEventListener('touchend', handleSeekEnd);
-        observer.disconnect();
-    }
-});
+	colorThief = new ColorThief();
+	window.addEventListener("click", handleClickOutside);
+	window.addEventListener("mousemove", handleSeekMove);
+	window.addEventListener("mouseup", handleSeekEnd);
+	window.addEventListener("touchmove", handleSeekMove);
+	window.addEventListener("touchend", handleSeekEnd);
 
+	// 定位逻辑
+	const observer = new ResizeObserver(() => {
+		window.requestAnimationFrame(calculatePosition);
+	});
+	observer.observe(document.body);
+
+	// 延迟初始计算
+	setTimeout(calculatePosition, 100);
+	setTimeout(calculatePosition, 500);
+
+	await fetchPlaylist();
+
+	if (audio) {
+		audio.volume = volume;
+		audio.addEventListener("timeupdate", () => {
+			if (!isDragging) {
+				currentTime = audio.currentTime;
+				duration = audio.duration || 0;
+				progress = (currentTime / duration) * 100;
+			}
+		});
+		audio.addEventListener("ended", handleAutoNext);
+		audio.addEventListener("play", () => (isPlaying = true));
+		audio.addEventListener("pause", () => (isPlaying = false));
+	}
+
+	return () => {
+		window.removeEventListener("click", handleClickOutside);
+		window.removeEventListener("mousemove", handleSeekMove);
+		window.removeEventListener("mouseup", handleSeekEnd);
+		window.removeEventListener("touchmove", handleSeekMove);
+		window.removeEventListener("touchend", handleSeekEnd);
+		observer.disconnect();
+	};
+});
 
 $: currentSong = playlist[currentIndex];
 // 切换歌曲时确认颜色
 $: if (currentSong && isExpanded) {
-    // 等待 DOM 更新
-    tick().then(() => extractColor());
+	// 等待 DOM 更新
+	tick().then(() => extractColor());
 }
 </script>
 
@@ -311,6 +316,8 @@ $: if (currentSong && isExpanded) {
 
 {#if musicConfig.enable && playlist.length > 0}
     <!-- 容器：固定定位，JS 计算对齐 -->
+    <!-- svelte-ignore a11y-click-events-have-key-events -->
+    <!-- svelte-ignore a11y-no-static-element-interactions -->
     <div 
         class="fixed bottom-4 z-50 music-player-container transition-all duration-300"
         style={playerStyle}
@@ -327,7 +334,13 @@ $: if (currentSong && isExpanded) {
             class:scale-95={!isExpanded}
             class:pointer-events-none={!isExpanded}
             style="background: rgba({primaryColor[0]}, {primaryColor[1]}, {primaryColor[2]}, 0.95); backdrop-filter: blur(20px); box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5), inset 0 0 0 1px rgba(255, 255, 255, 0.1);"
+            role="dialog"
+            aria-label="Music Player"
+            tabindex="-1"
             on:click|stopPropagation
+            on:keydown|stopPropagation={(e) => { 
+                if (e.key === 'Escape') toggleExpand();
+            }}
         >
             <!-- 头部 / 封面 -->
             <div 
@@ -347,8 +360,10 @@ $: if (currentSong && isExpanded) {
                     
                     <!-- 顶部控制：关闭 -->
                     <button 
+                        type="button"
                         class="absolute top-3 right-3 p-2 rounded-full bg-black/20 text-white/80 hover:bg-black/40 hover:text-white transition-all backdrop-blur-sm z-20"
                         on:click={toggleExpand}
+                        aria-label="Close player"
                     >
                        <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
                     </button>
@@ -361,7 +376,7 @@ $: if (currentSong && isExpanded) {
                 </div>
 
                 <!-- 控制区 -->
-                <div class="px-4 pb-5 relative z-10">
+                <div class="px-4 pb-5 relative z-10" role="group" aria-label="Controls">
                     <!-- 进度条 -->
                     <div 
                         id="progress-bar-container"
@@ -370,6 +385,18 @@ $: if (currentSong && isExpanded) {
                         on:touchstart={handleSeekStart}
                         role="slider" 
                         tabindex="0"
+                        aria-label="Seek slider"
+                        aria-valuenow={progress}
+                        aria-valuemin="0"
+                        aria-valuemax="100"
+                        on:keydown={(e) => {
+                            if (!audio) return;
+                            if (e.key === 'ArrowRight') {
+                                audio.currentTime = Math.min(audio.duration, audio.currentTime + 5);
+                            } else if (e.key === 'ArrowLeft') {
+                                audio.currentTime = Math.max(0, audio.currentTime - 5);
+                            }
+                        }}
                     >
                         <div class="h-1 w-full bg-white/20 rounded-full relative overflow-visible">
                              <div 
@@ -403,10 +430,12 @@ $: if (currentSong && isExpanded) {
                         {/if}
 
                          <button 
+                            type="button"
                             class="text-white/60 hover:text-white transition p-2 relative group" 
                             on:click={switchPlayMode}
-                            on:mouseenter={() => showModeTooltip = true}
-                            on:mouseleave={() => showModeTooltip = false}
+                            on:mouseenter={() => { if(window.matchMedia('(hover: hover)').matches) showModeTooltip = true; }}
+                            on:mouseleave={() => { if(window.matchMedia('(hover: hover)').matches) showModeTooltip = false; }}
+                            aria-label="Switch play mode"
                          >
                             {#if playMode === 'order'}
                                 <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 2l4 4-4 4"/><path d="M3 11v-1a4 4 0 0 1 4-4h14"/><path d="M7 22l-4-4 4-4"/><path d="M21 13v1a4 4 0 0 1-4 4H3"/></svg>
@@ -424,13 +453,15 @@ $: if (currentSong && isExpanded) {
                         </button>
 
                         <div class="flex items-center gap-4">
-                            <button class="text-white/80 hover:text-white transition" on:click={prevSong}>
+                            <button type="button" class="text-white/80 hover:text-white transition" on:click={prevSong} aria-label="Previous song">
                                 <svg xmlns="http://www.w3.org/2000/svg" class="w-7 h-7" viewBox="0 0 24 24" fill="currentColor"><path d="M6 6h2v12H6zm3.5 6l8.5 6V6z"/></svg>
                             </button>
                             
                             <button 
+                                type="button"
                                 class="w-12 h-12 flex items-center justify-center rounded-full bg-white text-black hover:scale-105 transition shadow-lg active:scale-95"
                                 on:click={togglePlay}
+                                aria-label={isPlaying ? "Pause" : "Play"}
                             >
                                 {#if isPlaying}
                                     <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" viewBox="0 0 24 24" fill="currentColor"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
@@ -439,13 +470,13 @@ $: if (currentSong && isExpanded) {
                                 {/if}
                             </button>
 
-                            <button class="text-white/80 hover:text-white transition" on:click={nextSong}>
+                            <button type="button" class="text-white/80 hover:text-white transition" on:click={nextSong} aria-label="Next song">
                                  <svg xmlns="http://www.w3.org/2000/svg" class="w-7 h-7" viewBox="0 0 24 24" fill="currentColor"><path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z"/></svg>
                             </button>
                         </div>
                         
                          <!-- 播放列表切换 -->
-                         <button class="text-white/60 hover:text-white transition p-2" on:click={() => showPlaylist = !showPlaylist} class:text-white={showPlaylist}>
+                         <button type="button" class="text-white/60 hover:text-white transition p-2" on:click={() => showPlaylist = !showPlaylist} class:text-white={showPlaylist} aria-label="Toggle playlist">
                             <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>
                         </button>
                     </div>
@@ -457,16 +488,19 @@ $: if (currentSong && isExpanded) {
                         class="absolute inset-x-0 bottom-0 top-16 z-10 flex flex-col transition-all duration-500"
                         style="background: rgba(0, 0, 0, 0.25); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);"
                         transition:slide={{ duration: 200 }}
+                        role="listbox"
+                        aria-label="Playlist"
                     > 
                         <div class="px-5 py-3 text-[10px] font-bold text-white/50 uppercase tracking-widest flex justify-between items-center bg-white/5">
                             <span>播放列表 ({playlist.length})</span>
-                             <button class="text-white/50 hover:text-white transition-colors p-1" on:click={() => showPlaylist = false}>
+                             <button type="button" class="text-white/50 hover:text-white transition-colors p-1" on:click={() => showPlaylist = false} aria-label="Close playlist">
                                 <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
                             </button>
                         </div>
                         <div class="flex-1 overflow-y-auto scrollbar-thin p-1 space-y-0.5">
                             {#each playlist as song, i}
                                 <button 
+                                    type="button"
                                     class="w-full flex items-center gap-3 p-2 rounded-md transition-all text-left group relative overflow-hidden"
                                     class:bg-white-10={currentIndex === i} 
                                     class:hover:bg-white-5={currentIndex !== i}
@@ -499,6 +533,7 @@ $: if (currentSong && isExpanded) {
 
         <!-- Floating Button (Collapsed) -->
         <button
+            type="button"
             class="absolute bottom-0 left-0 w-12 h-12 rounded-full shadow-lg overflow-hidden group transition-all duration-300 transform"
             class:opacity-100={!isExpanded}
             class:scale-100={!isExpanded}
@@ -509,6 +544,7 @@ $: if (currentSong && isExpanded) {
             class:animate-spin-slow={isPlaying}
             on:click|stopPropagation={toggleExpand}
             style="animation-duration: 10s;"
+            aria-label="Open music player"
         >
             {#if currentSong}
                     <img src={currentSong.pic} alt="cover" class="w-full h-full object-cover">
