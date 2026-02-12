@@ -42,7 +42,12 @@ const jsonLd = {
 	inLanguage: entry.data.lang
 		? entry.data.lang.replace("_", "-")
 		: siteConfig.lang.replace("_", "-"),
-	// TODO include cover image here
+	...(entry.data.image && {
+		image: new URL(
+			path.join("content/posts/", getDir(entry.id), entry.data.image),
+			Astro.site,
+		).href,
+	}),
 };
 ---
 <MainGridLayout banner={entry.data.image} title={entry.data.title} description={entry.data.description} lang={entry.data.lang} setOGTypeArticle={true} headings={headings}>
