@@ -2,6 +2,7 @@
 import I18nKey from "@i18n/i18nKey";
 import { i18n } from "@i18n/translation";
 import Icon from "@iconify/svelte";
+import { debounce } from "@utils/performance-utils.ts";
 import { url } from "@utils/url-utils.ts";
 import { onMount } from "svelte";
 import type { SearchResult } from "@/global";
@@ -86,6 +87,9 @@ const search = async (keyword: string, isDesktop: boolean): Promise<void> => {
 	}
 };
 
+// 创建防抖版本的搜索函数（300ms 延迟）
+const debouncedSearch = debounce(search, 300);
+
 onMount(() => {
 	const initializeSearch = () => {
 		initialized = true;
@@ -94,8 +98,8 @@ onMount(() => {
 			!!window.pagefind &&
 			typeof window.pagefind.search === "function";
 		console.log("Pagefind status on init:", pagefindLoaded);
-		if (keywordDesktop) search(keywordDesktop, true);
-		if (keywordMobile) search(keywordMobile, false);
+		if (keywordDesktop) debouncedSearch(keywordDesktop, true);
+		if (keywordMobile) debouncedSearch(keywordMobile, false);
 	};
 
 	if (import.meta.env.DEV) {
@@ -125,16 +129,13 @@ onMount(() => {
 	}
 });
 
+// 使用防抖版本的搜索
 $: if (initialized && keywordDesktop) {
-	(async () => {
-		await search(keywordDesktop, true);
-	})();
+	debouncedSearch(keywordDesktop, true);
 }
 
 $: if (initialized && keywordMobile) {
-	(async () => {
-		await search(keywordMobile, false);
-	})();
+	debouncedSearch(keywordMobile, false);
 }
 </script>
 
