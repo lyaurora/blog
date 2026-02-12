@@ -21,6 +21,15 @@ interface MusicConfig {
 	api?: string;
 }
 
+interface MetingItem {
+	id?: number | string;
+	title: string;
+	author: string;
+	url: string;
+	pic?: string;
+	lrc?: string;
+}
+
 // 状态
 let isExpanded = false;
 let isPlaying = false;
@@ -73,7 +82,7 @@ function formatTime(seconds: number) {
 	if (Number.isNaN(seconds)) return "0:00";
 	const min = Math.floor(seconds / 60);
 	const sec = Math.floor(seconds % 60);
-	return `${min}:${sec < 10 ? "0" + sec : sec}`;
+	return `${min}:${String(sec).padStart(2, "0")}`;
 }
 
 async function fetchPlaylist() {
@@ -85,7 +94,7 @@ async function fetchPlaylist() {
 		);
 		const data = await res.json();
 		// API 返回歌曲数组
-		playlist = data.map((item: Record<string, any>) => {
+		playlist = data.map((item: MetingItem) => {
 			let pic = item.pic || "";
 			if (pic) {
 				pic = pic.replace(/^http:/, "https:");
