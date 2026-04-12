@@ -263,13 +263,7 @@ export async function fetchPlaylist(config: MusicConfig) {
 			localStorage.setItem(
 				cacheKey,
 				JSON.stringify({
-					list: newPlaylist, // Cache unsorted original or sorted? Assuming unsorted for raw data, but let's cache what we have
-					// Actually caching sortedList is tricky because valid sort depends on likedSongs.
-					// Better cache the 'newPlaylist' (raw data) and let init resort it?
-					// Currently we cache 'newPlaylist' implicitly if we just store 'newPlaylist'.
-					// Let's store 'newPlaylist' (the fetched and mapped data BEFORE sorting by likes is usually cleaner,
-					// BUT logic above sets cache directly to store.
-					// Let's store 'newPlaylist' (mapped from API) and re-sort on load.
+					// Cache unsorted original raw data
 					list: newPlaylist,
 					date: Date.now(),
 				}),
