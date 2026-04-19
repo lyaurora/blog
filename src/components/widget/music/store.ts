@@ -29,6 +29,7 @@ let isSwitchingPlaylist = false;
 
 // Audio Element Reference
 let audio: HTMLAudioElement | null = null;
+let fadeInterval: number | null = null;
 
 // Derived or manual subscriptions
 currentIndex.subscribe(($index) => {
@@ -80,8 +81,8 @@ export function setAudioElement(el: HTMLAudioElement) {
 	
 	// Setup MediaSession hardware/OS controls
 	if (typeof navigator !== "undefined" && "mediaSession" in navigator) {
-		navigator.mediaSession.setActionHandler("play", togglePlay);
-		navigator.mediaSession.setActionHandler("pause", togglePlay);
+		navigator.mediaSession.setActionHandler("play", playAudio);
+		navigator.mediaSession.setActionHandler("pause", pauseAudio);
 		navigator.mediaSession.setActionHandler("previoustrack", prevSong);
 		navigator.mediaSession.setActionHandler("nexttrack", nextSong);
 	}
@@ -98,57 +99,89 @@ export function togglePlaylist() {
 	showPlaylist.update((v) => !v);
 }
 
-let fadeInterval: number | null = null;
-
-export function togglePlay() {
-	if (!audio) return;
-	
-	if (fadeInterval) {
+function clearFadeInterval() {
+	if (fadeInterval !== null) {
 		clearInterval(fadeInterval);
 		fadeInterval = null;
 	}
+}
 
-	if (get(isPlaying)) {
-		// Fade out over 200ms
-		const stepTime = 20;
-		const steps = 200 / stepTime;
-		const originalVolume = get(volume); // Store user's preferred volume
-		let currentStep = 0;
+function pauseAudio() {
+	if (!audio || audio.paused) return;
 
-		fadeInterval = window.setInterval(() => {
-			currentStep++;
-			const newVol = originalVolume * (1 - currentStep / steps);
-			if (newVol > 0 && audio) {
-				audio.volume = newVol;
-			} else {
-				if (audio) {
-				    audio.volume = 0;
-				    audio.pause();
-				    audio.volume = originalVolume; // Restore volume internally
-				}
-				if (fadeInterval) clearInterval(fadeInterval);
-			}
-		}, stepTime);
-	} else {
-		// Fade in over 200ms
+	clearFadeInterval();
+
+	// Fade out over 200ms to avoid abrupt clicks/pops in headphones.
+	const stepTime = 20;
+	const steps = 200 / stepTime;
+	let currentStep = 0;
+
+	fadeInterval = window.setInterval(() => {
+		if (!audio) {
+			clearFadeInterval();
+			return;
+		}
+
+		currentStep++;
 		const targetVolume = get(volume);
-		const stepTime = 20;
-		const steps = 200 / stepTime;
-		let currentStep = 0;
+		const newVol = targetVolume * (1 - currentStep / steps);
+
+		if (currentStep < steps && newVol > 0) {
+			audio.volume = newVol;
+			return;
+		}
 
 		audio.volume = 0;
-		audio.play().catch((e) => console.error("Playback failed", e));
+		audio.pause();
+		audio.volume = targetVolume;
+		clearFadeInterval();
+	}, stepTime);
+}
 
+function playAudio() {
+	if (!audio || !audio.paused) return;
+
+	clearFadeInterval();
+
+	// Fade in over 200ms to avoid abrupt clicks/pops in headphones.
+	const targetVolume = get(volume);
+	const stepTime = 20;
+	const steps = 200 / stepTime;
+	let currentStep = 0;
+
+	audio.volume = 0;
+	audio.play().then(() => {
 		fadeInterval = window.setInterval(() => {
+			if (!audio) {
+				clearFadeInterval();
+				return;
+			}
+
 			currentStep++;
 			const newVol = targetVolume * (currentStep / steps);
-			if (newVol < targetVolume && audio) {
+
+			if (currentStep < steps && newVol < targetVolume) {
 				audio.volume = newVol;
-			} else {
-				if (audio) audio.volume = targetVolume;
-				if (fadeInterval) clearInterval(fadeInterval);
+				return;
 			}
+
+			audio.volume = targetVolume;
+			clearFadeInterval();
 		}, stepTime);
+	}).catch((e) => {
+		if (audio) audio.volume = targetVolume;
+		clearFadeInterval();
+		console.error("Playback failed", e);
+	});
+}
+
+export function togglePlay() {
+	if (!audio) return;
+
+	if (get(isPlaying)) {
+		pauseAudio();
+	} else {
+		playAudio();
 	}
 }
 
