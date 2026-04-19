@@ -7,11 +7,11 @@ import Layout from "../layouts/MainGridLayout.astro";
 // ------------------------------------------
 // ✅ 新增：添加缓存控制
 // ------------------------------------------
-// 告诉 CDN：缓存这个页面 3600 秒（1小时）。
-// 在这 1 小时内，无论多少人访问，都不会重新请求 Bangumi API。
+// 告诉 CDN：缓存这个页面 21600 秒（6小时）。
+// 在这 6 小时内，无论多少人访问，都不会重新请求 Bangumi API。
 Astro.response.headers.set(
 	"Cache-Control",
-	"public, max-age=0, s-maxage=3600, stale-while-revalidate=604800",
+	"public, max-age=0, s-maxage=21600, stale-while-revalidate=604800",
 );
 
 // ------------------------------------------
@@ -69,11 +69,11 @@ interface BangumiCollection {
 	list: BangumiItem[];
 }
 
-// limit: 20
+// limit: 100
 const collections: Partial<BangumiCollection>[] = [
-	{ label: "正在追", type: 3, limit: 20 },
-	{ label: "补番计划", type: 1, limit: 20 },
-	{ label: "已看完", type: 2, limit: 20 },
+	{ label: "正在追", type: 3, limit: 100 },
+	{ label: "补番计划", type: 1, limit: 100 },
+	{ label: "已看完", type: 2, limit: 100 },
 ];
 
 const results: BangumiCollection[] = await Promise.all(
@@ -159,7 +159,7 @@ const results: BangumiCollection[] = await Promise.all(
                     src={cover} 
                     alt={title} 
                     class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
-                    loading="lazy"
+                    loading="lazy" referrerpolicy="no-referrer"
                   />
                   
                   <div class="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-end p-4">
