@@ -98,18 +98,63 @@ export function togglePlaylist() {
 	showPlaylist.update((v) => !v);
 }
 
+let fadeInterval: number | null = null;
+
 export function togglePlay() {
 	if (!audio) return;
+	
+	if (fadeInterval) {
+		clearInterval(fadeInterval);
+		fadeInterval = null;
+	}
+
 	if (get(isPlaying)) {
-		audio.pause();
+		// Fade out over 200ms
+		const stepTime = 20;
+		const steps = 200 / stepTime;
+		const originalVolume = get(volume); // Store user's preferred volume
+		let currentStep = 0;
+
+		fadeInterval = window.setInterval(() => {
+			currentStep++;
+			const newVol = originalVolume * (1 - currentStep / steps);
+			if (newVol > 0 && audio) {
+				audio.volume = newVol;
+			} else {
+				if (audio) {
+				    audio.volume = 0;
+				    audio.pause();
+				    audio.volume = originalVolume; // Restore volume internally
+				}
+				if (fadeInterval) clearInterval(fadeInterval);
+			}
+		}, stepTime);
 	} else {
+		// Fade in over 200ms
+		const targetVolume = get(volume);
+		const stepTime = 20;
+		const steps = 200 / stepTime;
+		let currentStep = 0;
+
+		audio.volume = 0;
 		audio.play().catch((e) => console.error("Playback failed", e));
+
+		fadeInterval = window.setInterval(() => {
+			currentStep++;
+			const newVol = targetVolume * (currentStep / steps);
+			if (newVol < targetVolume && audio) {
+				audio.volume = newVol;
+			} else {
+				if (audio) audio.volume = targetVolume;
+				if (fadeInterval) clearInterval(fadeInterval);
+			}
+		}, stepTime);
 	}
 }
 
 export function setVolume(val: number) {
 	volume.set(val);
-	if (audio) audio.volume = val;
+	if (audio && !fadeInterval) audio.volume = val;
 	if (typeof localStorage !== "undefined") {
 		localStorage.setItem("music-volume", val.toString());
 	}
