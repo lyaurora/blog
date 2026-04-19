@@ -50,6 +50,19 @@ playlist.subscribe(($playlist) => {
 	}
 });
 
+// Update MediaSession when song changes
+currentSong.subscribe(($song) => {
+	if (typeof navigator !== "undefined" && "mediaSession" in navigator && $song) {
+		navigator.mediaSession.metadata = new MediaMetadata({
+			title: $song.title,
+			artist: $song.author,
+			artwork: [
+				{ src: $song.pic, sizes: "300x300", type: "image/jpeg" }
+			]
+		});
+	}
+});
+
 // Helper: Sort playlist (Liked songs first)
 function sortMusicList(list: Song[], liked: Set<string>): Song[] {
 	return [...list].sort((a, b) => {
@@ -64,6 +77,14 @@ function sortMusicList(list: Song[], liked: Set<string>): Song[] {
 // Actions
 export function setAudioElement(el: HTMLAudioElement) {
 	audio = el;
+	
+	// Setup MediaSession hardware/OS controls
+	if (typeof navigator !== "undefined" && "mediaSession" in navigator) {
+		navigator.mediaSession.setActionHandler("play", togglePlay);
+		navigator.mediaSession.setActionHandler("pause", togglePlay);
+		navigator.mediaSession.setActionHandler("previoustrack", prevSong);
+		navigator.mediaSession.setActionHandler("nexttrack", nextSong);
+	}
 }
 
 export function toggleExpand() {
