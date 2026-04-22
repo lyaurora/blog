@@ -30,6 +30,8 @@ let isSwitchingPlaylist = false;
 // Audio Element Reference
 let audio: HTMLAudioElement | null = null;
 let fadeInterval: number | null = null;
+let playbackRequestToken = 0;
+let playbackIntent: "play" | "pause" = "pause";
 
 // Derived or manual subscriptions
 currentIndex.subscribe(($index) => {
@@ -107,9 +109,17 @@ function clearFadeInterval() {
 }
 
 function pauseAudio() {
-	if (!audio || audio.paused) return;
+	playbackIntent = "pause";
+	const requestToken = ++playbackRequestToken;
 
 	clearFadeInterval();
+
+	if (!audio) return;
+
+	if (audio.paused) {
+		audio.volume = get(volume);
+		return;
+	}
 
 	// Fade out over 200ms to avoid abrupt clicks/pops in headphones.
 	const stepTime = 20;
@@ -117,7 +127,11 @@ function pauseAudio() {
 	let currentStep = 0;
 
 	fadeInterval = window.setInterval(() => {
-		if (!audio) {
+		if (
+			!audio ||
+			requestToken !== playbackRequestToken ||
+			playbackIntent !== "pause"
+		) {
 			clearFadeInterval();
 			return;
 		}
@@ -139,7 +153,10 @@ function pauseAudio() {
 }
 
 function playAudio() {
-	if (!audio || !audio.paused) return;
+	if (!audio) return;
+
+	playbackIntent = "play";
+	const requestToken = ++playbackRequestToken;
 
 	clearFadeInterval();
 
@@ -149,10 +166,35 @@ function playAudio() {
 	const steps = 200 / stepTime;
 	let currentStep = 0;
 
+	if (!audio.paused) {
+		audio.volume = targetVolume;
+		return;
+	}
+
 	audio.volume = 0;
 	audio.play().then(() => {
+		if (!audio) return;
+
+		if (requestToken !== playbackRequestToken) {
+			if (playbackIntent !== "play") {
+				audio.pause();
+				audio.volume = targetVolume;
+			}
+			return;
+		}
+
+		if (playbackIntent !== "play") {
+			audio.pause();
+			audio.volume = targetVolume;
+			return;
+		}
+
 		fadeInterval = window.setInterval(() => {
-			if (!audio) {
+			if (
+				!audio ||
+				requestToken !== playbackRequestToken ||
+				playbackIntent !== "play"
+			) {
 				clearFadeInterval();
 				return;
 			}
@@ -171,6 +213,14 @@ function playAudio() {
 	}).catch((e) => {
 		if (audio) audio.volume = targetVolume;
 		clearFadeInterval();
+
+		if (
+			requestToken !== playbackRequestToken ||
+			playbackIntent !== "play"
+		) {
+			return;
+		}
+
 		console.error("Playback failed", e);
 	});
 }
@@ -309,7 +359,7 @@ export async function fetchPlaylist(config: MusicConfig) {
 		const cached = localStorage.getItem(cacheKey);
 		if (cached) {
 			try {
-				const { list, date } = JSON.parse(cached);
+				const { list } = JSON.parse(cached);
 				// Can check cache expiration here if needed (e.g. 1 day)
 				if (Array.isArray(list) && list.length > 0) {
 					const $likedSongs = get(likedSongs);

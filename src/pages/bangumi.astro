@@ -69,26 +69,72 @@ interface BangumiCollection {
 	list: BangumiItem[];
 }
 
+interface BangumiCollectionPage {
+	total?: number;
+	data?: BangumiItem[];
+}
+
+interface BangumiCollectionRequest {
+	label: string;
+	type: number;
+	limit: number;
+}
+
 // limit: 100
-const collections: Partial<BangumiCollection>[] = [
+const collections: BangumiCollectionRequest[] = [
 	{ label: "正在追", type: 3, limit: 100 },
 	{ label: "补番计划", type: 1, limit: 100 },
 	{ label: "已看完", type: 2, limit: 100 },
 ];
 
+async function fetchBangumiCollection(
+	type: number,
+	limit: number,
+): Promise<BangumiItem[]> {
+	const list: BangumiItem[] = [];
+	let offset = 0;
+
+	while (true) {
+		const url = `https://api.bgm.tv/v0/users/${USERNAME}/collections?subject_type=2&type=${type}&limit=${limit}&offset=${offset}`;
+		const res = await fetch(url, { headers: { "User-Agent": USER_AGENT } });
+
+		if (!res.ok) {
+			throw new Error(`Bangumi API error: ${res.status} ${res.statusText}`);
+		}
+
+		const json: BangumiCollectionPage = await res.json();
+		const page = Array.isArray(json.data) ? json.data : [];
+
+		if (page.length === 0) {
+			break;
+		}
+
+		list.push(...page);
+		offset += page.length;
+
+		if (typeof json.total === "number" && offset >= json.total) {
+			break;
+		}
+
+		if (page.length < limit) {
+			break;
+		}
+	}
+
+	return list;
+}
+
 const results: BangumiCollection[] = await Promise.all(
-	collections.map(async (col) => {
+	collections.map(async (col): Promise<BangumiCollection> => {
 		try {
 			if (!USERNAME) {
-				return { ...col, list: [] } as BangumiCollection;
+				return { ...col, list: [] };
 			}
-			const url = `https://api.bgm.tv/v0/users/${USERNAME}/collections?subject_type=2&type=${col.type}&limit=${col.limit}`;
-			const res = await fetch(url, { headers: { "User-Agent": USER_AGENT } });
-			const json = await res.json();
-			return { ...col, list: json.data || [] } as BangumiCollection;
+			const list = await fetchBangumiCollection(col.type, col.limit);
+			return { ...col, list };
 		} catch (error) {
 			console.error(`Fetch error for type ${col.type}:`, error);
-			return { ...col, list: [] } as BangumiCollection;
+			return { ...col, list: [] };
 		}
 	}),
 );
