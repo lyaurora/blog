@@ -7,7 +7,7 @@ export const DEFAULT_MUSIC_CONFIG: MusicConfig = {
 	type: "playlist",
 };
 
-export const DEFAULT_API_URL = "https://api.122425.xyz/meting/";
+export const DEFAULT_API_URL = "/api/meting/";
 
 export const MODE_NAMES = {
 	order: "顺序播放",
