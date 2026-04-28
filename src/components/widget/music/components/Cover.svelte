@@ -1,5 +1,5 @@
 <script lang="ts">
-import { onMount, tick } from "svelte";
+import { tick } from "svelte";
 import {
 	currentSong,
 	isExpanded,
@@ -54,15 +54,14 @@ async function extractColor() {
 	}
 }
 
-// 监听歌曲变化重新提取颜色
-$: if ($currentSong && $isExpanded) {
-	tick().then(() => extractColor());
-}
-
 let imageLoaded = false;
 let lastPic: string | null = null;
+let lastColorPic: string | null = null;
 function handleImageLoad() {
 	imageLoaded = true;
+	if ($isExpanded) {
+		extractColor();
+	}
 }
 
 $: if ($currentSong) {
@@ -70,6 +69,11 @@ $: if ($currentSong) {
 		imageLoaded = false;
 		lastPic = $currentSong.pic;
 	}
+}
+
+$: if ($currentSong && $isExpanded && $currentSong.pic !== lastColorPic) {
+	lastColorPic = $currentSong.pic;
+	tick().then(() => extractColor());
 }
 </script>
 

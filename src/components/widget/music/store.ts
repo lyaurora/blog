@@ -26,6 +26,7 @@ export const errorMsg = writable<string | null>(null);
 
 // Internal flag to prevent currentSong jitter during playlist reordering
 let isSwitchingPlaylist = false;
+const preloadedCovers = new Set<string>();
 
 // Audio Element Reference
 let audio: HTMLAudioElement | null = null;
@@ -60,8 +61,8 @@ currentSong.subscribe(($song) => {
 			title: $song.title,
 			artist: $song.author,
 			artwork: [
-				{ src: $song.pic, sizes: "300x300", type: "image/jpeg" }
-			]
+				{ src: $song.pic, sizes: "500x500", type: "image/jpeg" },
+			],
 		});
 	}
 });
@@ -225,6 +226,21 @@ function playAudio() {
 	});
 }
 
+function preloadCover(pic?: string) {
+	if (!pic || typeof Image === "undefined" || preloadedCovers.has(pic)) return;
+	preloadedCovers.add(pic);
+	const image = new Image();
+	image.decoding = "async";
+	image.src = pic;
+}
+
+function preloadNearbyCovers(list: Song[], index: number) {
+	if (list.length === 0) return;
+	preloadCover(list[index]?.pic);
+	preloadCover(list[(index + 1) % list.length]?.pic);
+	preloadCover(list[(index - 1 + list.length) % list.length]?.pic);
+}
+
 export function togglePlay() {
 	if (!audio) return;
 
@@ -279,8 +295,11 @@ export function nextSong() {
 			newIndex = Math.floor(Math.random() * $playlist.length);
 		}
 		currentIndex.set(newIndex);
+		preloadNearbyCovers($playlist, newIndex);
 	} else {
-		currentIndex.set(($index + 1) % $playlist.length);
+		const newIndex = ($index + 1) % $playlist.length;
+		currentIndex.set(newIndex);
+		preloadNearbyCovers($playlist, newIndex);
 	}
 	isPlaying.set(true);
 }
@@ -290,11 +309,14 @@ export function prevSong() {
 	if ($playlist.length === 0) return;
 
 	const $index = get(currentIndex);
-	currentIndex.set(($index - 1 + $playlist.length) % $playlist.length);
+	const newIndex = ($index - 1 + $playlist.length) % $playlist.length;
+	currentIndex.set(newIndex);
+	preloadNearbyCovers($playlist, newIndex);
 	isPlaying.set(true);
 }
 
 export function playSong(index: number) {
+	preloadNearbyCovers(get(playlist), index);
 	currentIndex.set(index);
 	isPlaying.set(true);
 }
@@ -365,6 +387,7 @@ export async function fetchPlaylist(config: MusicConfig) {
 					const $likedSongs = get(likedSongs);
 					const sortedCache = sortMusicList(list, $likedSongs);
 					playlist.set(sortedCache);
+					preloadNearbyCovers(sortedCache, get(currentIndex));
 				}
 			} catch (e) {
 				console.error("Failed to load cached playlist", e);
@@ -409,6 +432,7 @@ export async function fetchPlaylist(config: MusicConfig) {
 
 		const sortedPlaylist = sortMusicList(newPlaylist, $likedSongs);
 		playlist.set(sortedPlaylist);
+		preloadNearbyCovers(sortedPlaylist, get(currentIndex));
 
 		// Update Cache
 		if (typeof localStorage !== "undefined") {

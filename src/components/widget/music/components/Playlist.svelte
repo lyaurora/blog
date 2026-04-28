@@ -1,5 +1,4 @@
 <script lang="ts">
-import { tick } from "svelte";
 import { flip } from "svelte/animate";
 import { slide } from "svelte/transition";
 import {
@@ -13,6 +12,8 @@ import {
 	toggleLike,
 } from "../store";
 import type { Song } from "../types";
+
+export let isLightBackground = false;
 
 async function handlePlaySong(index: number) {
 	playSong(index);
@@ -41,26 +42,28 @@ $: if ($showPlaylist) {
 {#if $showPlaylist}
     <div 
         class="absolute inset-x-0 bottom-0 top-16 z-10 flex flex-col transition-all duration-500"
-        style="background: rgba(0, 0, 0, 0.25); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);"
+        class:text-neutral-950={isLightBackground}
+        class:text-white={!isLightBackground}
+        style="background: {isLightBackground ? 'rgba(255, 255, 255, 0.35)' : 'rgba(0, 0, 0, 0.25)'}; backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);"
         transition:slide={{ duration: 200 }}
         role="listbox"
         aria-label="Playlist"
     >
-        <div class="px-5 py-3 text-[10px] font-bold text-white/50 uppercase tracking-widest flex justify-between items-center bg-white/5">
+        <div class="px-5 py-3 text-[10px] font-bold opacity-55 uppercase tracking-widest flex justify-between items-center bg-current/5">
             <span>播放列表 ({$playlist.length})</span>
-                <button type="button" class="text-white/50 hover:text-white transition-colors p-1" on:click={() => $showPlaylist = false} aria-label="Close playlist">
+                <button type="button" class="opacity-60 hover:opacity-100 transition-opacity p-1" on:click={() => $showPlaylist = false} aria-label="Close playlist">
                 <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
             </button>
         </div>
         
         <div class="flex-1 overflow-y-auto scrollbar-thin p-1 space-y-0.5 relative">
             {#if $errorMsg}
-                <div class="absolute inset-0 flex flex-col items-center justify-center text-white/60 p-4 text-center">
+                <div class="absolute inset-0 flex flex-col items-center justify-center opacity-65 p-4 text-center">
                     <svg xmlns="http://www.w3.org/2000/svg" class="w-8 h-8 mb-2 opacity-50" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
                     <p class="text-xs">{$errorMsg}</p>
                 </div>
             {:else if $playlist.length === 0}
-                <div class="absolute inset-0 flex flex-col items-center justify-center text-white/40 p-4 text-center">
+                <div class="absolute inset-0 flex flex-col items-center justify-center opacity-45 p-4 text-center">
                     <p class="text-xs">暂无歌曲</p>
                 </div>
             {:else}
@@ -71,18 +74,18 @@ $: if ($showPlaylist) {
                         <!-- svelte-ignore a11y-no-static-element-interactions -->
                         <div 
                             class="w-full flex items-center gap-3 p-2 rounded-md transition-all text-left group relative overflow-hidden cursor-pointer"
-                            class:bg-white-10={$currentIndex === i} 
+                            class:bg-current-10={$currentIndex === i}
                             class:playlist-active-item={$currentIndex === i}
-                            class:hover:bg-white-5={$currentIndex !== i}
+                            class:hover:bg-current-5={$currentIndex !== i}
                             on:click={() => handlePlaySong(i)}
                         >
                             {#if $currentIndex === i}
-                                <div class="absolute left-0 top-1/2 -translate-y-1/2 h-4 w-1 bg-white rounded-r my-auto"></div>
+                                <div class="absolute left-0 top-1/2 -translate-y-1/2 h-4 w-1 bg-current rounded-r my-auto"></div>
                             {/if}
                             
                             <div class="flex-1 min-w-0 pl-2">
-                                <div class="text-xs font-bold truncate text-white/90 group-hover:text-white transition">{song.title}</div>
-                                <div class="text-[10px] truncate text-white/50 group-hover:text-white/70 transition mt-0.5">{song.author}</div>
+                                <div class="text-xs font-bold truncate opacity-90 group-hover:opacity-100 transition-opacity">{song.title}</div>
+                                <div class="text-[10px] truncate opacity-55 group-hover:opacity-75 transition-opacity mt-0.5">{song.author}</div>
                             </div>
 
                             <!-- 播放状态 (Status) -->
@@ -90,12 +93,12 @@ $: if ($showPlaylist) {
                                 <div class="shrink-0 flex items-center justify-center w-4 h-4 mr-1">
                                     {#if $isPlaying}
                                         <div class="flex gap-0.5 items-end h-3">
-                                            <div class="w-0.5 bg-white animate-music-bar-1"></div>
-                                            <div class="w-0.5 bg-white animate-music-bar-2"></div>
-                                            <div class="w-0.5 bg-white animate-music-bar-3"></div>
+                                            <div class="w-0.5 bg-current animate-music-bar-1"></div>
+                                            <div class="w-0.5 bg-current animate-music-bar-2"></div>
+                                            <div class="w-0.5 bg-current animate-music-bar-3"></div>
                                         </div>
                                     {:else}
-                                        <svg xmlns="http://www.w3.org/2000/svg" class="w-3 h-3 text-white/50" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="w-3 h-3 opacity-55" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
                                     {/if}
                                 </div>
                             {/if}
@@ -103,7 +106,7 @@ $: if ($showPlaylist) {
                             <!-- 交互式红心 (Interactive Heart) -->
                             <button 
                                 type="button"
-                                class="w-6 h-6 flex items-center justify-center hover:text-red-500 hover:scale-110 transition shrink-0 z-10 {likedIds.has(song.id) ? 'text-red-500' : 'text-white/30'}" 
+                                class="w-6 h-6 flex items-center justify-center hover:text-red-500 hover:scale-110 transition shrink-0 z-10 {likedIds.has(song.id) ? 'text-red-500' : 'opacity-35'}"
                                 on:click={(e) => handleLike(e, song)}
                                 aria-label={likedIds.has(song.id) ? "Unlike" : "Like"}
                             >
@@ -122,8 +125,8 @@ $: if ($showPlaylist) {
 {/if}
 
 <style>
-    .bg-white-10 { background-color: rgba(255,255,255,0.1); }
-    .bg-white-5 { background-color: rgba(255,255,255,0.05); }
+    .bg-current-10 { background-color: color-mix(in srgb, currentColor 10%, transparent); }
+    .bg-current-5 { background-color: color-mix(in srgb, currentColor 5%, transparent); }
 
     /* 自定义滚动条 */
     .scrollbar-thin::-webkit-scrollbar {

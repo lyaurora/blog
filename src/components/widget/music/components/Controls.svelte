@@ -43,7 +43,7 @@ function handleModeSwitch() {
 
             <button 
                 type="button"
-                class="text-white/60 hover:text-white transition p-1.5 relative group" 
+                class="text-current opacity-65 hover:opacity-100 transition p-1.5 relative group"
                 on:click={handleModeSwitch}
                 on:mouseenter={() => { if(window.matchMedia('(hover: hover)').matches) showModeTooltip = true; }}
                 on:mouseleave={() => { if(window.matchMedia('(hover: hover)').matches) showModeTooltip = false; }}
@@ -68,7 +68,7 @@ function handleModeSwitch() {
         <!-- Like Button -->
         <button 
             type="button"
-            class="text-white/60 hover:text-red-400 transition p-1.5 relative group"
+            class="text-current opacity-65 hover:text-red-400 transition p-1.5 relative group"
             class:text-red-500={$currentSong && $likedSongs.has($currentSong.id)}
             on:click={toggleLike}
             aria-label={$currentSong && $likedSongs.has($currentSong.id) ? "Unlike" : "Like"}
@@ -83,13 +83,13 @@ function handleModeSwitch() {
 
     <!-- Center Group: Prev, Play, Next -->
     <div class="flex items-center gap-1">
-        <button type="button" class="text-white/80 hover:text-white transition p-1" on:click={prevSong} aria-label="Previous song">
+        <button type="button" class="text-current opacity-80 hover:opacity-100 transition p-1" on:click={prevSong} aria-label="Previous song">
             <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" viewBox="0 0 24 24" fill="currentColor"><path d="M6 6h2v12H6zm3.5 6l8.5 6V6z"/></svg>
         </button>
         
         <button 
             type="button"
-            class="w-8 h-8 flex items-center justify-center rounded-full bg-white text-black hover:scale-105 transition shadow-lg active:scale-95"
+            class="w-8 h-8 flex items-center justify-center rounded-full bg-current text-[var(--player-play-icon)] hover:scale-105 transition shadow-lg active:scale-95"
             on:click={togglePlay}
             aria-label={$isPlaying ? "Pause" : "Play"}
         >
@@ -100,7 +100,7 @@ function handleModeSwitch() {
             {/if}
         </button>
 
-        <button type="button" class="text-white/80 hover:text-white transition p-1" on:click={nextSong} aria-label="Next song">
+        <button type="button" class="text-current opacity-80 hover:opacity-100 transition p-1" on:click={nextSong} aria-label="Next song">
                 <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" viewBox="0 0 24 24" fill="currentColor"><path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z"/></svg>
         </button>
     </div>

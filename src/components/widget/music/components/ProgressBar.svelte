@@ -1,5 +1,5 @@
 <script lang="ts">
-import { currentTime, duration, isPlaying, progress } from "../store";
+import { currentTime, duration, progress } from "../store";
 
 export let audio: HTMLAudioElement | null = null;
 
@@ -61,12 +61,12 @@ function handleSeekEnd(e: MouseEvent | TouchEvent) {
         }
     }}
 >
-    <div class="h-1 w-full bg-white/20 rounded-full relative overflow-visible">
+    <div class="h-1 w-full bg-current/20 rounded-full relative overflow-visible">
             <div 
-            class="h-full bg-white/90 rounded-full relative" 
+            class="h-full bg-current/90 rounded-full relative"
             style="width: {$progress}%"
         >
-            <div class="absolute right-0 top-1/2 -translate-y-1/2 translate-x-1/2 w-3 h-3 bg-white rounded-full shadow-md opacity-0 group-hover:opacity-100 transition-opacity"
+            <div class="absolute right-0 top-1/2 -translate-y-1/2 translate-x-1/2 w-3 h-3 bg-current rounded-full shadow-md opacity-0 group-hover:opacity-100 transition-opacity"
                     class:opacity-100={isDragging}
             ></div>
         </div>

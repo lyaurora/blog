@@ -1,6 +1,6 @@
 <script lang="ts">
 import { fade } from "svelte/transition";
-import { isExpanded, setVolume, volume } from "../store";
+import { setVolume, volume } from "../store";
 
 let volumeBar: HTMLDivElement;
 let isDraggingVolume = false;
@@ -67,7 +67,7 @@ function handleVolumeClick() {
             <div class="h-28 w-8 bg-black/60 backdrop-blur-md rounded-full shadow-xl border border-white/10 flex flex-col items-center justify-end pb-3 pt-3">
                 <div 
                     bind:this={volumeBar}
-                    class="volume-bar relative w-1.5 h-full bg-white/20 rounded-full cursor-pointer flex flex-col justify-end overflow-hidden group/slider"
+                    class="volume-bar relative w-1.5 h-full bg-current/20 rounded-full cursor-pointer flex flex-col justify-end overflow-hidden group/slider"
                     on:mousedown={handleVolumeStart}
                     on:touchstart={handleVolumeStart}
                     on:click|stopPropagation={(e) => updateVolume(e)}
@@ -87,7 +87,7 @@ function handleVolumeClick() {
                     }}
                 >
                     <div 
-                        class="w-full bg-white rounded-full relative transition-all duration-75"
+                        class="w-full bg-current rounded-full relative transition-all duration-75"
                         style="height: {$volume * 100}%"
                     ></div>
                 </div>
@@ -97,7 +97,7 @@ function handleVolumeClick() {
 
     <button 
         type="button"
-        class="text-white/60 hover:text-white transition p-1.5 relative"
+        class="text-current opacity-65 hover:opacity-100 transition p-1.5 relative"
         on:click={handleVolumeClick}
         aria-label={$volume > 0 ? "Mute" : "Unmute"}
     >

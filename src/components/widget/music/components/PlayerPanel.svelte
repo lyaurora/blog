@@ -17,6 +17,21 @@ import ProgressBar from "./ProgressBar.svelte";
 import VolumeControl from "./VolumeControl.svelte";
 
 export let audio: HTMLAudioElement | null = null;
+
+$: isLightBackground =
+	($primaryColor[0] * 299 + $primaryColor[1] * 587 + $primaryColor[2] * 114) /
+		1000 >
+	160;
+$: foregroundClass = isLightBackground ? "text-neutral-950" : "text-white";
+$: mutedForegroundClass = isLightBackground
+	? "text-neutral-950/65"
+	: "text-white/60";
+$: subtleForegroundClass = isLightBackground
+	? "text-neutral-950/45"
+	: "text-white/50";
+$: panelShadow = isLightBackground
+	? "0 25px 50px -12px rgba(0, 0, 0, 0.28), inset 0 0 0 1px rgba(0, 0, 0, 0.08)"
+	: "0 25px 50px -12px rgba(0, 0, 0, 0.5), inset 0 0 0 1px rgba(255, 255, 255, 0.1)";
 </script>
 
 <div 
@@ -29,7 +44,7 @@ export let audio: HTMLAudioElement | null = null;
     class:translate-y-4={!$isExpanded}
     class:scale-95={!$isExpanded}
     class:pointer-events-none={!$isExpanded}
-    style="background: rgba({$primaryColor[0]}, {$primaryColor[1]}, {$primaryColor[2]}, 0.95); backdrop-filter: blur(20px); box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5), inset 0 0 0 1px rgba(255, 255, 255, 0.1);"
+    style="background: rgba({$primaryColor[0]}, {$primaryColor[1]}, {$primaryColor[2]}, 0.95); backdrop-filter: blur(20px); box-shadow: {panelShadow}; --player-play-icon: {isLightBackground ? 'white' : 'black'};"
     role="dialog"
     aria-label="Music Player"
     tabindex="-1"
@@ -42,17 +57,17 @@ export let audio: HTMLAudioElement | null = null;
     <Cover />
 
     <!-- 歌曲信息（移出遮罩区域以确保可见性） -->
-    <div class="px-5 -mt-10 relative z-10 text-white mb-2" style="text-shadow: 0 2px 4px rgba(0,0,0,0.3);">
+    <div class="px-5 -mt-10 relative z-10 mb-2 {foregroundClass}" style="text-shadow: {isLightBackground ? '0 1px 2px rgba(255,255,255,0.45)' : '0 2px 4px rgba(0,0,0,0.3)'};">
         <div class="text-lg font-bold truncate tracking-tight">{$currentSong?.title}</div>
-        <div class="text-xs text-white/80 truncate mt-1 font-medium">{$currentSong?.author}</div>
+        <div class="text-xs truncate mt-1 font-medium {mutedForegroundClass}">{$currentSong?.author}</div>
     </div>
 
     <!-- 控制区 -->
-    <div class="px-2 pb-3 relative z-10" role="group" aria-label="Controls">
+    <div class="px-2 pb-3 relative z-10 {foregroundClass}" role="group" aria-label="Controls">
         <!-- 进度条 -->
         <ProgressBar {audio} />
         
-        <div class="flex justify-between items-center text-[10px] text-white/50 mb-3 font-medium tracking-wide">
+        <div class="flex justify-between items-center text-[10px] mb-3 font-medium tracking-wide {subtleForegroundClass}">
             <span>{formatTime($currentTime)}</span>
             <span>{formatTime($duration)}</span>
         </div>
@@ -72,5 +87,5 @@ export let audio: HTMLAudioElement | null = null;
     </div>
     
     <!-- 播放列表遮罩 -->
-    <Playlist />
+    <Playlist {isLightBackground} />
 </div>
