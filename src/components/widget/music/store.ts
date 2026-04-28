@@ -392,7 +392,10 @@ export async function fetchPlaylist(config: MusicConfig) {
 			let pic = item.pic || "";
 			if (pic) {
 				pic = pic.replace(/^http:/, "https:");
-				pic += pic.includes("?") ? "&param=300y300" : "?param=300y300";
+				const sizeParam = pic.includes("type=pic")
+					? "picsize=500"
+					: "param=500y500";
+				pic += pic.includes("?") ? `&${sizeParam}` : `?${sizeParam}`;
 			}
 			return {
 				id: String(item.id || item.url),
