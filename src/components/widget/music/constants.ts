@@ -7,7 +7,9 @@ export const DEFAULT_MUSIC_CONFIG: MusicConfig = {
 	type: "playlist",
 };
 
-export const DEFAULT_API_URL = "/api/meting/";
+export const DEFAULT_API_URL = import.meta.env.DEV
+	? "https://blog.122425.xyz/api/meting/"
+	: "/api/meting/";
 
 export const MODE_NAMES = {
 	order: "顺序播放",

@@ -12,6 +12,11 @@ let coverImg: HTMLImageElement;
 let colorThief: any; // Dynamic import type
 let colorCache: Record<string, [number, number, number]> = {};
 
+$: isLightBackground =
+	($primaryColor[0] * 299 + $primaryColor[1] * 587 + $primaryColor[2] * 114) /
+		1000 >
+	160;
+
 async function extractColor() {
 	if (!$currentSong || !$currentSong.pic) return;
 
@@ -96,10 +101,25 @@ $: if ($currentSong && $isExpanded && $currentSong.pic !== lastColorPic) {
     <!-- 顶部控制：关闭 -->
     <button 
         type="button"
-        class="absolute top-3 right-3 p-2 rounded-full bg-black/20 text-white/80 hover:bg-black/40 hover:text-white transition-all backdrop-blur-sm z-20"
+        class="absolute top-3 right-3 p-2 rounded-full transition-all backdrop-blur-sm z-20"
+        class:bg-white-40={isLightBackground}
+        class:hover:bg-white-60={isLightBackground}
+        class:text-neutral-800={isLightBackground}
+        class:bg-black-20={!isLightBackground}
+        class:hover:bg-black-40={!isLightBackground}
+        class:text-white-80={!isLightBackground}
+        class:hover:text-white={!isLightBackground}
         on:click={toggleExpand}
         aria-label="Close player"
     >
         <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
     </button>
 </div>
+
+<style>
+    .bg-white-40 { background-color: rgba(255, 255, 255, 0.4); }
+    .hover\:bg-white-60:hover { background-color: rgba(255, 255, 255, 0.6); }
+    .bg-black-20 { background-color: rgba(0, 0, 0, 0.2); }
+    .hover\:bg-black-40:hover { background-color: rgba(0, 0, 0, 0.4); }
+    .text-white-80 { color: rgba(255, 255, 255, 0.8); }
+</style>

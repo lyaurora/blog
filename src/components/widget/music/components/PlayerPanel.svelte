@@ -22,13 +22,20 @@ $: isLightBackground =
 	($primaryColor[0] * 299 + $primaryColor[1] * 587 + $primaryColor[2] * 114) /
 		1000 >
 	160;
-$: foregroundClass = isLightBackground ? "text-neutral-950" : "text-white";
+$: foregroundClass = isLightBackground ? "text-neutral-900" : "text-white";
 $: mutedForegroundClass = isLightBackground
-	? "text-neutral-950/65"
+	? "text-neutral-800/65"
 	: "text-white/60";
 $: subtleForegroundClass = isLightBackground
-	? "text-neutral-950/45"
+	? "text-neutral-800/45"
 	: "text-white/50";
+$: titleForegroundClass = isLightBackground
+	? "text-neutral-900/80"
+	: "text-white";
+$: titleWeightClass = isLightBackground ? "font-medium" : "font-semibold";
+$: artistForegroundClass = isLightBackground
+	? "text-neutral-700/60"
+	: "text-white/75";
 $: panelShadow = isLightBackground
 	? "0 25px 50px -12px rgba(0, 0, 0, 0.28), inset 0 0 0 1px rgba(0, 0, 0, 0.08)"
 	: "0 25px 50px -12px rgba(0, 0, 0, 0.5), inset 0 0 0 1px rgba(255, 255, 255, 0.1)";
@@ -44,7 +51,7 @@ $: panelShadow = isLightBackground
     class:translate-y-4={!$isExpanded}
     class:scale-95={!$isExpanded}
     class:pointer-events-none={!$isExpanded}
-    style="background: rgba({$primaryColor[0]}, {$primaryColor[1]}, {$primaryColor[2]}, 0.95); backdrop-filter: blur(20px); box-shadow: {panelShadow}; --player-play-icon: {isLightBackground ? 'white' : 'black'};"
+    style="background: rgba({$primaryColor[0]}, {$primaryColor[1]}, {$primaryColor[2]}, 0.95); backdrop-filter: blur(20px); box-shadow: {panelShadow}; --player-play-bg: {isLightBackground ? 'rgba(255, 255, 255, 0.86)' : 'rgb(255, 255, 255)'}; --player-play-icon: {isLightBackground ? 'rgb(38, 38, 38)' : 'rgb(0, 0, 0)'};"
     role="dialog"
     aria-label="Music Player"
     tabindex="-1"
@@ -57,9 +64,9 @@ $: panelShadow = isLightBackground
     <Cover />
 
     <!-- 歌曲信息（移出遮罩区域以确保可见性） -->
-    <div class="px-5 -mt-10 relative z-10 mb-2 {foregroundClass}" style="text-shadow: {isLightBackground ? '0 1px 2px rgba(255,255,255,0.45)' : '0 2px 4px rgba(0,0,0,0.3)'};">
-        <div class="text-lg font-bold truncate tracking-tight">{$currentSong?.title}</div>
-        <div class="text-xs truncate mt-1 font-medium {mutedForegroundClass}">{$currentSong?.author}</div>
+    <div class="px-5 -mt-10 relative z-10 mb-2 {titleForegroundClass}" style="text-shadow: {isLightBackground ? '0 1px 2px rgba(255,255,255,0.35)' : '0 2px 4px rgba(0,0,0,0.35)'};">
+        <div class="text-[1.05rem] leading-6 {titleWeightClass} truncate">{$currentSong?.title}</div>
+        <div class="text-[0.72rem] leading-4 truncate mt-0.5 font-medium {artistForegroundClass}">{$currentSong?.author}</div>
     </div>
 
     <!-- 控制区 -->
@@ -67,7 +74,7 @@ $: panelShadow = isLightBackground
         <!-- 进度条 -->
         <ProgressBar {audio} />
         
-        <div class="flex justify-between items-center text-[10px] mb-3 font-medium tracking-wide {subtleForegroundClass}">
+        <div class="flex justify-between items-center text-[10px] mb-3 font-normal tabular-nums {subtleForegroundClass}">
             <span>{formatTime($currentTime)}</span>
             <span>{formatTime($duration)}</span>
         </div>
@@ -79,7 +86,7 @@ $: panelShadow = isLightBackground
                 <VolumeControl />
 
                 <!-- 播放列表切换 -->
-                <button type="button" class="text-white/60 hover:text-white transition p-1.5" on:click={togglePlaylist} class:text-white={$showPlaylist} aria-label="Toggle playlist">
+                <button type="button" class="text-current opacity-65 hover:opacity-100 transition p-1.5" on:click={togglePlaylist} class:opacity-100={$showPlaylist} aria-label="Toggle playlist">
                     <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>
                 </button>
             </div>

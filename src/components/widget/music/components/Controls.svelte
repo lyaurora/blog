@@ -89,7 +89,8 @@ function handleModeSwitch() {
         
         <button 
             type="button"
-            class="w-8 h-8 flex items-center justify-center rounded-full bg-current text-[var(--player-play-icon)] hover:scale-105 transition shadow-lg active:scale-95"
+            class="w-8 h-8 flex items-center justify-center rounded-full hover:scale-105 transition shadow-lg active:scale-95"
+            style="background: var(--player-play-bg); color: var(--player-play-icon);"
             on:click={togglePlay}
             aria-label={$isPlaying ? "Pause" : "Play"}
         >

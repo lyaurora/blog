@@ -388,6 +388,7 @@ export async function fetchPlaylist(config: MusicConfig) {
 					const sortedCache = sortMusicList(list, $likedSongs);
 					playlist.set(sortedCache);
 					preloadNearbyCovers(sortedCache, get(currentIndex));
+					errorMsg.set(null);
 				}
 			} catch (e) {
 				console.error("Failed to load cached playlist", e);
@@ -433,6 +434,7 @@ export async function fetchPlaylist(config: MusicConfig) {
 		const sortedPlaylist = sortMusicList(newPlaylist, $likedSongs);
 		playlist.set(sortedPlaylist);
 		preloadNearbyCovers(sortedPlaylist, get(currentIndex));
+		errorMsg.set(null);
 
 		// Update Cache
 		if (typeof localStorage !== "undefined") {
