@@ -1,4 +1,4 @@
-import { get, writable } from "svelte/store";
+import { derived, get, writable } from "svelte/store";
 import { DEFAULT_API_URL } from "./constants";
 import type {
 	ColorArray,
@@ -23,16 +23,44 @@ export const currentTime = writable(0);
 export const volume = writable(0.5);
 export const likedSongs = writable<Set<string>>(new Set());
 export const errorMsg = writable<string | null>(null);
+export const isAudioLoading = writable(false);
+export const isSeeking = writable(false);
+export const audioPreconnectOrigins = derived(
+	[playlist, currentIndex],
+	([$playlist, $currentIndex]) => {
+		if ($playlist.length === 0) return [];
+
+		const origins = new Set<string>();
+		for (const offset of [0, 1, -1]) {
+			const song =
+				$playlist[($currentIndex + offset + $playlist.length) % $playlist.length];
+			if (!song?.url) continue;
+			try {
+				origins.add(new URL(song.url).origin);
+			} catch {
+				// Ignore malformed upstream URLs; the audio element will report the real error.
+			}
+		}
+		return Array.from(origins);
+	},
+);
 
 // Internal flag to prevent currentSong jitter during playlist reordering
 let isSwitchingPlaylist = false;
 const preloadedCovers = new Set<string>();
+const preloadedAudio = new Map<string, HTMLAudioElement>();
+const PLAYLIST_CACHE_MAX_AGE = 7 * 24 * 60 * 60 * 1000;
+const MAX_AUDIO_ERROR_SKIPS = 3;
 
 // Audio Element Reference
 let audio: HTMLAudioElement | null = null;
 let fadeInterval: number | null = null;
 let playbackRequestToken = 0;
 let playbackIntent: "play" | "pause" = "pause";
+let consecutiveAudioErrors = 0;
+let lastAudioErrorUrl = "";
+let lastAudioErrorAt = 0;
+let lastCurrentSongUrl = "";
 
 // Derived or manual subscriptions
 currentIndex.subscribe(($index) => {
@@ -56,6 +84,14 @@ playlist.subscribe(($playlist) => {
 
 // Update MediaSession when song changes
 currentSong.subscribe(($song) => {
+	const nextUrl = $song?.url || "";
+	if (nextUrl !== lastCurrentSongUrl) {
+		progress.set(0);
+		currentTime.set(0);
+		duration.set(0);
+		lastCurrentSongUrl = nextUrl;
+	}
+
 	if (typeof navigator !== "undefined" && "mediaSession" in navigator && $song) {
 		navigator.mediaSession.metadata = new MediaMetadata({
 			title: $song.title,
@@ -76,6 +112,28 @@ function sortMusicList(list: Song[], liked: Set<string>): Song[] {
 		if (!aLiked && bLiked) return 1;
 		return 0;
 	});
+}
+
+function setPlaylistWithSafeIndex(list: Song[]) {
+	if (list.length === 0) {
+		playlist.set([]);
+		currentSong.set(undefined);
+		return;
+	}
+
+	const activeSong = get(currentSong);
+	let nextIndex = get(currentIndex);
+
+	if (activeSong) {
+		const activeIndex = list.findIndex((song) => song.id === activeSong.id);
+		if (activeIndex !== -1) nextIndex = activeIndex;
+	}
+
+	if (nextIndex < 0 || nextIndex >= list.length) nextIndex = 0;
+
+	playlist.set(list);
+	currentIndex.set(nextIndex);
+	currentSong.set(list[nextIndex]);
 }
 
 // Actions
@@ -102,6 +160,44 @@ export function togglePlaylist() {
 	showPlaylist.update((v) => !v);
 }
 
+export function handleAudioWaiting() {
+	if (get(isPlaying) || playbackIntent === "play") {
+		isAudioLoading.set(true);
+	}
+}
+
+export function handleAudioReady() {
+	consecutiveAudioErrors = 0;
+	lastAudioErrorUrl = "";
+	isAudioLoading.set(false);
+	if (get(playlist).length > 0) errorMsg.set(null);
+}
+
+export function handleAudioError() {
+	isAudioLoading.set(false);
+
+	const failedSong = get(currentSong);
+	if (!failedSong) return;
+
+	const now = Date.now();
+	if (failedSong.url === lastAudioErrorUrl && now - lastAudioErrorAt < 1200) {
+		return;
+	}
+	lastAudioErrorUrl = failedSong.url;
+	lastAudioErrorAt = now;
+
+	const $playlist = get(playlist);
+	if ($playlist.length <= 1 || consecutiveAudioErrors >= MAX_AUDIO_ERROR_SKIPS) {
+		isPlaying.set(false);
+		errorMsg.set("当前歌曲加载失败，请稍后再试");
+		return;
+	}
+
+	consecutiveAudioErrors++;
+	console.warn("Audio failed, skipping to next song", failedSong.title);
+	nextSong();
+}
+
 function clearFadeInterval() {
 	if (fadeInterval !== null) {
 		clearInterval(fadeInterval);
@@ -112,6 +208,7 @@ function clearFadeInterval() {
 function pauseAudio() {
 	playbackIntent = "pause";
 	const requestToken = ++playbackRequestToken;
+	isAudioLoading.set(false);
 
 	clearFadeInterval();
 
@@ -169,10 +266,13 @@ function playAudio() {
 
 	if (!audio.paused) {
 		audio.volume = targetVolume;
+		preloadNearbyAudio(get(playlist), get(currentIndex));
 		return;
 	}
 
 	audio.volume = 0;
+	isAudioLoading.set(true);
+	preloadNearbyAudio(get(playlist), get(currentIndex));
 	audio.play().then(() => {
 		if (!audio) return;
 
@@ -213,6 +313,7 @@ function playAudio() {
 		}, stepTime);
 	}).catch((e) => {
 		if (audio) audio.volume = targetVolume;
+		isAudioLoading.set(false);
 		clearFadeInterval();
 
 		if (
@@ -223,6 +324,9 @@ function playAudio() {
 		}
 
 		console.error("Playback failed", e);
+		if (!(e instanceof DOMException) || e.name !== "NotAllowedError") {
+			handleAudioError();
+		}
 	});
 }
 
@@ -239,6 +343,40 @@ function preloadNearbyCovers(list: Song[], index: number) {
 	preloadCover(list[index]?.pic);
 	preloadCover(list[(index + 1) % list.length]?.pic);
 	preloadCover(list[(index - 1 + list.length) % list.length]?.pic);
+}
+
+function preloadAudio(url?: string) {
+	if (!url || typeof Audio === "undefined" || preloadedAudio.has(url)) return;
+
+	const nextAudio = new Audio();
+	nextAudio.crossOrigin = "anonymous";
+	nextAudio.preload = "auto";
+	nextAudio.src = url;
+	nextAudio.load();
+	preloadedAudio.set(url, nextAudio);
+
+	if (preloadedAudio.size > 6) {
+		const [oldUrl, oldAudio] = preloadedAudio.entries().next().value as [
+			string,
+			HTMLAudioElement,
+		];
+		oldAudio.removeAttribute("src");
+		oldAudio.load();
+		preloadedAudio.delete(oldUrl);
+	}
+}
+
+function preloadNearbyAudio(list: Song[], index: number) {
+	if (list.length === 0) return;
+	preloadAudio(list[(index + 1) % list.length]?.url);
+	preloadAudio(list[(index - 1 + list.length) % list.length]?.url);
+}
+
+function preloadNearbyAssets(list: Song[], index: number) {
+	preloadNearbyCovers(list, index);
+	if (get(isPlaying) || playbackIntent === "play") {
+		preloadNearbyAudio(list, index);
+	}
 }
 
 export function togglePlay() {
@@ -294,12 +432,12 @@ export function nextSong() {
 		while (newIndex === $index && $playlist.length > 1) {
 			newIndex = Math.floor(Math.random() * $playlist.length);
 		}
+		preloadNearbyAssets($playlist, newIndex);
 		currentIndex.set(newIndex);
-		preloadNearbyCovers($playlist, newIndex);
 	} else {
 		const newIndex = ($index + 1) % $playlist.length;
+		preloadNearbyAssets($playlist, newIndex);
 		currentIndex.set(newIndex);
-		preloadNearbyCovers($playlist, newIndex);
 	}
 	isPlaying.set(true);
 }
@@ -310,13 +448,16 @@ export function prevSong() {
 
 	const $index = get(currentIndex);
 	const newIndex = ($index - 1 + $playlist.length) % $playlist.length;
+	preloadNearbyAssets($playlist, newIndex);
 	currentIndex.set(newIndex);
-	preloadNearbyCovers($playlist, newIndex);
 	isPlaying.set(true);
 }
 
 export function playSong(index: number) {
-	preloadNearbyCovers(get(playlist), index);
+	const $playlist = get(playlist);
+	if (index < 0 || index >= $playlist.length) return;
+
+	preloadNearbyAssets($playlist, index);
 	currentIndex.set(index);
 	isPlaying.set(true);
 }
@@ -377,17 +518,23 @@ export async function fetchPlaylist(config: MusicConfig) {
 
 	// Try to load from cache first
 	const cacheKey = `music-playlist-${config.id}`;
+	let hasUsableCache = false;
 	if (typeof localStorage !== "undefined") {
 		const cached = localStorage.getItem(cacheKey);
 		if (cached) {
 			try {
-				const { list } = JSON.parse(cached);
-				// Can check cache expiration here if needed (e.g. 1 day)
-				if (Array.isArray(list) && list.length > 0) {
+				const { list, date } = JSON.parse(cached);
+				const cacheAge = typeof date === "number" ? Date.now() - date : 0;
+				if (
+					Array.isArray(list) &&
+					list.length > 0 &&
+					cacheAge <= PLAYLIST_CACHE_MAX_AGE
+				) {
 					const $likedSongs = get(likedSongs);
 					const sortedCache = sortMusicList(list, $likedSongs);
-					playlist.set(sortedCache);
-					preloadNearbyCovers(sortedCache, get(currentIndex));
+					setPlaylistWithSafeIndex(sortedCache);
+					preloadNearbyAssets(sortedCache, get(currentIndex));
+					hasUsableCache = true;
 					errorMsg.set(null);
 				}
 			} catch (e) {
@@ -432,8 +579,8 @@ export async function fetchPlaylist(config: MusicConfig) {
 		});
 
 		const sortedPlaylist = sortMusicList(newPlaylist, $likedSongs);
-		playlist.set(sortedPlaylist);
-		preloadNearbyCovers(sortedPlaylist, get(currentIndex));
+		setPlaylistWithSafeIndex(sortedPlaylist);
+		preloadNearbyAssets(sortedPlaylist, get(currentIndex));
 		errorMsg.set(null);
 
 		// Update Cache
@@ -449,7 +596,9 @@ export async function fetchPlaylist(config: MusicConfig) {
 		}
 	} catch (e) {
 		console.error("Failed to fetch playlist", e);
-		errorMsg.set("加载歌单失败，请检查网络设置");
+		if (!hasUsableCache) {
+			errorMsg.set("加载歌单失败，请检查网络设置");
+		}
 	}
 }
 

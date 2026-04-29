@@ -3,6 +3,7 @@ import { fade } from "svelte/transition";
 import { MODE_NAMES } from "../constants";
 import {
 	currentSong,
+	isAudioLoading,
 	isPlaying,
 	likedSongs,
 	nextSong,
@@ -92,9 +93,14 @@ function handleModeSwitch() {
             class="w-8 h-8 flex items-center justify-center rounded-full hover:scale-105 transition shadow-lg active:scale-95"
             style="background: var(--player-play-bg); color: var(--player-play-icon);"
             on:click={togglePlay}
-            aria-label={$isPlaying ? "Pause" : "Play"}
+            aria-label={$isAudioLoading ? "Loading" : $isPlaying ? "Pause" : "Play"}
         >
-            {#if $isPlaying}
+            {#if $isAudioLoading}
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 animate-spin" viewBox="0 0 24 24" fill="none">
+                    <circle class="opacity-25" cx="12" cy="12" r="9" stroke="currentColor" stroke-width="3"></circle>
+                    <path class="opacity-85" fill="currentColor" d="M21 12a9 9 0 0 0-9-9v3a6 6 0 0 1 6 6h3z"></path>
+                </svg>
+            {:else if $isPlaying}
                 <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
             {:else}
                 <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 mx-auto" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>

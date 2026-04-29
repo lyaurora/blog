@@ -4,14 +4,20 @@ import { siteConfig } from "@/config";
 import PlayerPanel from "./music/components/PlayerPanel.svelte";
 import { DEFAULT_MUSIC_CONFIG } from "./music/constants";
 import {
+	audioPreconnectOrigins,
 	currentSong,
 	currentTime,
 	duration,
 	fetchPlaylist,
+	handleAudioError,
+	handleAudioReady,
+	handleAudioWaiting,
 	handleAutoNext,
 	initLikeStore,
+	isAudioLoading,
 	isExpanded,
 	isPlaying,
+	isSeeking,
 	progress,
 	setAudioElement,
 	toggleExpand,
@@ -66,13 +72,18 @@ function setupAudio(node: HTMLAudioElement) {
 	setAudioElement(node);
 
 	const handleTimeUpdate = () => {
+		if ($isSeeking) return;
+
 		currentTime.set(node.currentTime);
 		duration.set(node.duration || 0);
 		progress.set((node.currentTime / (node.duration || 1)) * 100);
 	};
 
 	const handlePlayState = () => isPlaying.set(true);
-	const handlePauseState = () => isPlaying.set(false);
+	const handlePauseState = () => {
+		isPlaying.set(false);
+		isAudioLoading.set(false);
+	};
 	const handleEnded = () => {
 		handleAutoNext();
 	};
@@ -80,6 +91,11 @@ function setupAudio(node: HTMLAudioElement) {
 	node.addEventListener("timeupdate", handleTimeUpdate);
 	node.addEventListener("ended", handleEnded);
 	node.addEventListener("play", handlePlayState);
+	node.addEventListener("playing", handleAudioReady);
+	node.addEventListener("canplay", handleAudioReady);
+	node.addEventListener("waiting", handleAudioWaiting);
+	node.addEventListener("loadstart", handleAudioWaiting);
+	node.addEventListener("error", handleAudioError);
 	node.addEventListener("pause", handlePauseState);
 
 	return {
@@ -87,6 +103,11 @@ function setupAudio(node: HTMLAudioElement) {
 			node.removeEventListener("timeupdate", handleTimeUpdate);
 			node.removeEventListener("ended", handleEnded);
 			node.removeEventListener("play", handlePlayState);
+			node.removeEventListener("playing", handleAudioReady);
+			node.removeEventListener("canplay", handleAudioReady);
+			node.removeEventListener("waiting", handleAudioWaiting);
+			node.removeEventListener("loadstart", handleAudioWaiting);
+			node.removeEventListener("error", handleAudioError);
 			node.removeEventListener("pause", handlePauseState);
 		},
 	};
@@ -146,6 +167,12 @@ $: if ($currentSong) {
 	}
 }
 </script>
+
+<svelte:head>
+	{#each $audioPreconnectOrigins as origin}
+		<link rel="preconnect" href={origin} crossorigin="anonymous" />
+	{/each}
+</svelte:head>
 
 <svelte:window on:click={handleClickOutside} on:resize={() => calculatePosition()} />
 
@@ -214,6 +241,7 @@ $: if ($currentSong) {
             use:setupAudio
             src={$currentSong?.url}
             autoplay={$isPlaying}
+            preload="metadata"
             crossorigin="anonymous"
         ></audio>
     </div>
