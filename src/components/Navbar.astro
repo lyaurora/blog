@@ -106,6 +106,15 @@ loadButtonScript();
 
 {import.meta.env.PROD && <script is:inline define:vars={{scriptUrl: url('/pagefind/pagefind.js')}}>
 async function loadPagefind() {
+    if (window.pagefind && typeof window.pagefind.search === 'function') {
+        document.dispatchEvent(new CustomEvent('pagefindready'));
+        return window.pagefind;
+    }
+    if (window.__pagefindLoadPromise) {
+        return window.__pagefindLoadPromise;
+    }
+
+    window.__pagefindLoadPromise = (async () => {
     try {
         const response = await fetch(scriptUrl, { method: 'HEAD' });
         if (!response.ok) {
@@ -121,6 +130,7 @@ async function loadPagefind() {
         window.pagefind = pagefind;
 
         document.dispatchEvent(new CustomEvent('pagefindready'));
+        return pagefind;
 
     } catch (error) {
         console.error('Failed to load Pagefind:', error);
@@ -129,13 +139,50 @@ async function loadPagefind() {
             options: () => Promise.resolve(),
         };
         document.dispatchEvent(new CustomEvent('pagefindloaderror'));
+        return window.pagefind;
 
+    }
+    })();
+
+    return window.__pagefindLoadPromise;
+}
+
+window["loadPagefind"] = loadPagefind;
+
+function bindPagefindTriggers() {
+    const triggerSelectors = [
+        '#search-bar',
+        '#search-switch',
+        '#search-panel',
+        '#search-bar-inside',
+    ];
+
+    for (const selector of triggerSelectors) {
+        const el = document.querySelector(selector);
+        if (!el) continue;
+        el.addEventListener('pointerenter', loadPagefind, { once: true, passive: true });
+        el.addEventListener('focusin', loadPagefind, { once: true });
+        el.addEventListener('click', loadPagefind, { once: true, passive: true });
     }
 }
 
+function scheduleIdlePagefindLoad() {
+    const load = () => loadPagefind();
+    if ('requestIdleCallback' in window) {
+        window.requestIdleCallback(load, { timeout: 5000 });
+    } else {
+        window.setTimeout(load, 3000);
+    }
+}
+
+function setupPagefindLoader() {
+    bindPagefindTriggers();
+    scheduleIdlePagefindLoad();
+}
+
 if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', loadPagefind);
+    document.addEventListener('DOMContentLoaded', setupPagefindLoader);
 } else {
-    loadPagefind();
+    setupPagefindLoader();
 }
 </script>}
