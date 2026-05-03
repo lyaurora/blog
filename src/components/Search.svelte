@@ -48,6 +48,16 @@ const setPanelVisibility = (show: boolean, isDesktop: boolean): void => {
 	}
 };
 
+const ensurePagefindLoaded = async (): Promise<void> => {
+	if (!import.meta.env.PROD || pagefindLoaded) return;
+
+	if (typeof window.loadPagefind === "function") {
+		await window.loadPagefind();
+		pagefindLoaded =
+			!!window.pagefind && typeof window.pagefind.search === "function";
+	}
+};
+
 const search = async (keyword: string, isDesktop: boolean): Promise<void> => {
 	if (!keyword) {
 		setPanelVisibility(false, isDesktop);
@@ -63,6 +73,8 @@ const search = async (keyword: string, isDesktop: boolean): Promise<void> => {
 
 	try {
 		let searchResults: SearchResult[] = [];
+
+		await ensurePagefindLoaded();
 
 		if (import.meta.env.PROD && pagefindLoaded && window.pagefind) {
 			const response = await window.pagefind.search(keyword);

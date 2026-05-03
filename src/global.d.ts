@@ -1,16 +1,21 @@
 import type { AstroIntegration } from "@swup/astro";
 
+interface Pagefind {
+	search: (query: string) => Promise<{
+		results: Array<{
+			data: () => Promise<SearchResult>;
+		}>;
+	}>;
+	options?: (options: Record<string, unknown>) => Promise<void>;
+}
+
 declare global {
 	interface Window {
 		// type from '@swup/astro' is incorrect
 		swup: AstroIntegration;
-		pagefind: {
-			search: (query: string) => Promise<{
-				results: Array<{
-					data: () => Promise<SearchResult>;
-				}>;
-			}>;
-		};
+		pagefind?: Pagefind;
+		loadPagefind?: () => Promise<Pagefind | null>;
+		__pagefindLoadPromise?: Promise<Pagefind | null>;
 	}
 }
 
