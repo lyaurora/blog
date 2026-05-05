@@ -31,7 +31,7 @@
 		"@iconify-json/fa6-regular": "^1.2.4",
 		"@iconify-json/fa6-solid": "^1.2.4",
 		"@iconify-json/material-symbols": "^1.2.69",
-		"@iconify/svelte": "^4.2.0",
+		"@iconify/svelte": "^5.2.1",
 		"@swup/astro": "^1.8.0",
 		"@tailwindcss/typography": "^0.5.19",
 		"@vercel/analytics": "^2.0.1",
@@ -75,7 +75,7 @@
 		"@types/mdast": "^4.0.4",
 		"@types/sanitize-html": "^2.16.1",
 		"postcss-import": "^16.1.1",
-		"postcss-nesting": "^13.0.2"
+		"postcss-nesting": "^14.0.0"
 	},
 	"packageManager": "pnpm@9.14.4"
 }
