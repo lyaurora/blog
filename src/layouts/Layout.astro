@@ -148,8 +148,6 @@ const bannerOffset =
 
 		<slot name="head"></slot>
 
-		<Analytics />
-
 		<link rel="alternate" type="application/rss+xml" title={profileConfig.name} href={`${Astro.site}rss.xml`}/>
 
 	</head>
@@ -157,9 +155,10 @@ const bannerOffset =
 		  data-overlayscrollbars-initialize
 	>
 		<ConfigCarrier></ConfigCarrier>
-		<SpeedInsights />
 		<slot />
         <MusicPlayer client:only="svelte" />
+		<Analytics />
+		<SpeedInsights />
 
 		<!-- increase the page height during page transition to prevent the scrolling animation from jumping -->
 		<div id="page-height-extend" class="hidden h-[300vh]"></div>
