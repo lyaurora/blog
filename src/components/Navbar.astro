@@ -161,7 +161,26 @@ function bindPagefindTriggers() {
 }
 
 function scheduleIdlePagefindLoad() {
-    window.setTimeout(loadPagefind, 1600);
+    const loadWhenIdle = () => {
+        if (
+            window.__pagefindLoadPromise ||
+            (window.pagefind && typeof window.pagefind.search === 'function')
+        ) {
+            return;
+        }
+
+        if ('requestIdleCallback' in window) {
+            window.requestIdleCallback(loadPagefind);
+        } else {
+            window.setTimeout(loadPagefind, 0);
+        }
+    };
+
+    if (document.documentElement.classList.contains('entry-ready')) {
+        loadWhenIdle();
+    } else {
+        document.addEventListener('blog:entry-ready', loadWhenIdle, {once: true});
+    }
 }
 
 function setupPagefindLoader() {

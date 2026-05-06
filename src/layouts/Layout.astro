@@ -116,8 +116,11 @@ const bannerOffset =
 		<script is:inline define:vars={{DEFAULT_THEME, LIGHT_MODE, DARK_MODE, AUTO_MODE, BANNER_HEIGHT_EXTEND, PAGE_WIDTH, configHue}}>
 			document.documentElement.classList.add('entry-pending');
 			window.setTimeout(() => {
+				if (document.documentElement.classList.contains('entry-ready')) return;
 				document.documentElement.classList.remove('entry-pending');
-			}, 1500);
+				document.documentElement.classList.add('entry-ready');
+				document.dispatchEvent(new CustomEvent('blog:entry-ready', {detail: {fallback: true}}));
+			}, 2500);
 
 			// Load the theme from local storage
 			const theme = localStorage.getItem('theme') || DEFAULT_THEME;
@@ -371,32 +374,72 @@ function showBanner() {
 		return;
 	}
 
-	const fromStyle = getComputedStyle(banner);
-	const fromTransform = fromStyle.transform;
 	banner.classList.remove('opacity-0', 'scale-105');
 
-	if (window.matchMedia('(prefers-reduced-motion: reduce)').matches || !banner.animate) {
+	if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
 		return;
 	}
 
-	const toStyle = getComputedStyle(banner);
-	banner.animate([
-		{
-			opacity: 0,
-			transform: fromTransform === 'none' ? 'scale(1.05)' : fromTransform,
-		},
-		{
-			opacity: 1,
-			transform: toStyle.transform === 'none' ? 'scale(1)' : toStyle.transform,
-		},
-	], {
-		duration: 700,
-		easing: 'cubic-bezier(0.4, 0, 0.2, 1)',
-	});
+	banner.classList.add('banner-entry-animation');
+	banner.addEventListener('animationend', () => {
+		banner.classList.remove('banner-entry-animation');
+	}, {once: true});
 }
 
 function wait(ms: number) {
 	return new Promise(resolve => window.setTimeout(resolve, ms));
+}
+
+function toMs(value: unknown) {
+	if (typeof value === 'number') return value;
+	if (typeof value === 'string') return Number.parseFloat(value) || 0;
+	return 0;
+}
+
+function getAnimationEndTime(animation: Animation) {
+	const timing = animation.effect?.getTiming();
+	if (!timing) return 0;
+
+	const duration = toMs(timing.duration);
+	const delay = Math.max(0, toMs(timing.delay));
+	const endDelay = Math.max(0, toMs(timing.endDelay));
+	const iterations = typeof timing.iterations === 'number' && Number.isFinite(timing.iterations)
+		? timing.iterations
+		: 1;
+
+	return delay + duration * iterations + endDelay;
+}
+
+async function waitForEntryAnimations() {
+	await new Promise<void>(resolve => {
+		requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
+	});
+
+	const targets = document.querySelectorAll<HTMLElement>(
+		'#navbar, #sidebar, #content-wrapper, #banner-credit, #banner, .footer'
+	);
+	const animations = Array.from(targets)
+		.flatMap(target => target.getAnimations())
+		.filter(animation => {
+			const timing = animation.effect?.getTiming();
+			if (!timing) return false;
+			return animation.playState !== 'finished' && toMs(timing.duration) > 0;
+		});
+
+	if (animations.length === 0) return;
+
+	const maxWait = Math.max(...animations.map(getAnimationEndTime)) + 50;
+	await Promise.race([
+		Promise.allSettled(animations.map(animation => animation.finished.catch(() => undefined))),
+		wait(maxWait),
+	]);
+}
+
+function markEntryReady() {
+	if (document.documentElement.classList.contains('entry-ready')) return;
+	document.documentElement.classList.remove('entry-pending');
+	document.documentElement.classList.add('entry-ready');
+	document.dispatchEvent(new CustomEvent('blog:entry-ready'));
 }
 
 async function startEntryAnimations() {
@@ -410,6 +453,8 @@ async function startEntryAnimations() {
 	} finally {
 		showBanner();
 		document.documentElement.classList.remove('entry-pending');
+		await waitForEntryAnimations();
+		markEntryReady();
 	}
 }
 

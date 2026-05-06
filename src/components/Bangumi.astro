@@ -33,6 +33,7 @@ const username = siteConfig.bangumiUser;
 
 <script is:inline define:vars={{ username }}>
     (() => {
+    const entryReadyEvent = 'blog:entry-ready';
     const loadBangumi = async () => {
         const container = document.getElementById('bangumi-content');
         if (!container) return;
@@ -109,7 +110,11 @@ const username = siteConfig.bangumiUser;
         }
     };
 
-    window.setTimeout(loadBangumi, 900);
+    if (document.documentElement.classList.contains('entry-ready')) {
+        loadBangumi();
+    } else {
+        document.addEventListener(entryReadyEvent, loadBangumi, {once: true});
+    }
     })();
 </script>
 
