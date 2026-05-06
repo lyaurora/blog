@@ -120,22 +120,45 @@ onMount(() => {
 		);
 		initializeSearch();
 	} else {
-		document.addEventListener("pagefindready", () => {
+		if (
+			typeof window !== "undefined" &&
+			window.pagefind &&
+			typeof window.pagefind.search === "function"
+		) {
 			initializeSearch();
-		});
-		document.addEventListener("pagefindloaderror", () => {
+			return;
+		}
+
+		const handlePagefindReady = () => initializeSearch();
+		const handlePagefindLoadError = () => {
 			console.warn(
 				"Pagefind load error event received. Search functionality will be limited.",
 			);
 			initializeSearch(); // Initialize with pagefindLoaded as false
+		};
+
+		document.addEventListener("pagefindready", handlePagefindReady, {
+			once: true,
+		});
+		document.addEventListener("pagefindloaderror", handlePagefindLoadError, {
+			once: true,
 		});
 
 		// Fallback in case events are not caught or pagefind is already loaded by the time this script runs
-		setTimeout(() => {
+		const fallbackTimer = window.setTimeout(() => {
 			if (!initialized) {
 				initializeSearch();
 			}
 		}, 2000); // Adjust timeout as needed
+
+		return () => {
+			window.clearTimeout(fallbackTimer);
+			document.removeEventListener("pagefindready", handlePagefindReady);
+			document.removeEventListener(
+				"pagefindloaderror",
+				handlePagefindLoadError,
+			);
+		};
 	}
 });
 

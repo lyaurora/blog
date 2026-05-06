@@ -25,46 +25,6 @@ import { parseDirectiveNode } from "./src/plugins/remark-directive-rehype.js";
 import { remarkExcerpt } from "./src/plugins/remark-excerpt.js";
 import { remarkReadingTime } from "./src/plugins/remark-reading-time.mjs";
 
-function rehypeLazyIframes() {
-	return (tree) => {
-		const visit = (node) => {
-			if (!node || typeof node !== "object") return;
-			if (node.type === "element" && node.tagName === "iframe") {
-				node.properties = node.properties || {};
-				node.properties.loading = node.properties.loading || "lazy";
-			}
-			if (node.type === "raw" && typeof node.value === "string") {
-				node.value = node.value.replace(
-					/<iframe\b(?![^>]*\sloading=)/gi,
-					'<iframe loading="lazy"',
-				);
-			}
-			if (Array.isArray(node.children)) {
-				for (const child of node.children) visit(child);
-			}
-		};
-		visit(tree);
-	};
-}
-
-function remarkLazyIframes() {
-	return (tree) => {
-		const visit = (node) => {
-			if (!node || typeof node !== "object") return;
-			if (node.type === "html" && typeof node.value === "string") {
-				node.value = node.value.replace(
-					/<iframe\b(?![^>]*\sloading=)/gi,
-					'<iframe loading="lazy"',
-				);
-			}
-			if (Array.isArray(node.children)) {
-				for (const child of node.children) visit(child);
-			}
-		};
-		visit(tree);
-	};
-}
-
 // https://astro.build/config
 export default defineConfig({
 	site: "https://blog.122425.xyz/",
@@ -151,7 +111,6 @@ export default defineConfig({
 			remarkMath,
 			remarkReadingTime,
 			remarkExcerpt,
-			remarkLazyIframes,
 			remarkGithubAdmonitionsToDirectives,
 			remarkDirective,
 			remarkSectionize,
@@ -160,7 +119,6 @@ export default defineConfig({
 		rehypePlugins: [
 			rehypeKatex,
 			rehypeSlug,
-			rehypeLazyIframes,
 			[
 				rehypeComponents,
 				{
