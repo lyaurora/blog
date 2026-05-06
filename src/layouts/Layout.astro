@@ -114,6 +114,11 @@ const bannerOffset =
 
 		<!-- Set the theme before the page is rendered to avoid a flash -->
 		<script is:inline define:vars={{DEFAULT_THEME, LIGHT_MODE, DARK_MODE, AUTO_MODE, BANNER_HEIGHT_EXTEND, PAGE_WIDTH, configHue}}>
+			document.documentElement.classList.add('entry-pending');
+			window.setTimeout(() => {
+				document.documentElement.classList.remove('entry-pending');
+			}, 1500);
+
 			// Load the theme from local storage
 			const theme = localStorage.getItem('theme') || DEFAULT_THEME;
 			switch (theme) {
@@ -366,7 +371,46 @@ function showBanner() {
 		return;
 	}
 
+	const fromStyle = getComputedStyle(banner);
+	const fromTransform = fromStyle.transform;
 	banner.classList.remove('opacity-0', 'scale-105');
+
+	if (window.matchMedia('(prefers-reduced-motion: reduce)').matches || !banner.animate) {
+		return;
+	}
+
+	const toStyle = getComputedStyle(banner);
+	banner.animate([
+		{
+			opacity: 0,
+			transform: fromTransform === 'none' ? 'scale(1.05)' : fromTransform,
+		},
+		{
+			opacity: 1,
+			transform: toStyle.transform === 'none' ? 'scale(1)' : toStyle.transform,
+		},
+	], {
+		duration: 700,
+		easing: 'cubic-bezier(0.4, 0, 0.2, 1)',
+	});
+}
+
+function wait(ms: number) {
+	return new Promise(resolve => window.setTimeout(resolve, ms));
+}
+
+async function startEntryAnimations() {
+	try {
+		if (document.fonts?.ready) {
+			await Promise.race([document.fonts.ready, wait(800)]);
+		}
+		await new Promise<void>(resolve => {
+			requestAnimationFrame(() => resolve());
+		});
+	} finally {
+		showBanner();
+		document.documentElement.classList.remove('entry-pending');
+	}
 }
 
 function init() {
@@ -374,7 +418,7 @@ function init() {
 	loadTheme();
 	loadHue();
 	initCustomScrollbar();
-	showBanner();
+	startEntryAnimations();
 }
 
 /* Load settings when entering the site */

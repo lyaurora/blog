@@ -161,12 +161,7 @@ function bindPagefindTriggers() {
 }
 
 function scheduleIdlePagefindLoad() {
-    const load = () => loadPagefind();
-    if ('requestIdleCallback' in window) {
-        window.requestIdleCallback(load, { timeout: 5000 });
-    } else {
-        window.setTimeout(load, 3000);
-    }
+    window.setTimeout(loadPagefind, 1600);
 }
 
 function setupPagefindLoader() {

@@ -25,6 +25,11 @@ html.is-animating .transition-swup-fade {
     will-change: opacity, transform;
     backface-visibility: hidden;
 }
+html.entry-pending .onload-animation {
+    opacity: 0;
+    transform: translate3d(0, 2rem, 0);
+    animation: none !important;
+}
 #navbar {
     animation-delay: 0ms
 }
