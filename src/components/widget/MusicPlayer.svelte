@@ -123,10 +123,12 @@ function handleClickOutside(event: MouseEvent) {
 }
 
 let mounted = false;
+let hydrated = false;
 let imageLoaded = false;
 let lastPic: string | null = null;
 
 onMount(() => {
+	hydrated = true;
 	initLikeStore();
 
 	// 优化：仅使用 ResizeObserver，移除 RAF
@@ -176,7 +178,7 @@ $: if ($currentSong) {
 
 <svelte:window on:click={handleClickOutside} on:resize={() => calculatePosition()} />
 
-{#if musicConfig.enable}
+{#if musicConfig.enable && hydrated}
     <!-- 容器：固定定位 -->
     <!-- svelte-ignore a11y-click-events-have-key-events -->
     <!-- svelte-ignore a11y-no-static-element-interactions -->
