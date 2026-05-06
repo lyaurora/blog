@@ -13,6 +13,7 @@ let result: SearchResult[] = [];
 let isSearching = false;
 let pagefindLoaded = false;
 let initialized = false;
+let lastPreloadedKeyword = "";
 
 const fakeResult: SearchResult[] = [
 	{
@@ -56,6 +57,23 @@ const ensurePagefindLoaded = async (): Promise<void> => {
 		pagefindLoaded =
 			!!window.pagefind && typeof window.pagefind.search === "function";
 	}
+};
+
+const preloadPagefindKeyword = (keyword: string): void => {
+	const normalizedKeyword = keyword.trim();
+	if (
+		!import.meta.env.PROD ||
+		!normalizedKeyword ||
+		normalizedKeyword === lastPreloadedKeyword
+	) {
+		return;
+	}
+	lastPreloadedKeyword = normalizedKeyword;
+
+	void (async () => {
+		await ensurePagefindLoaded();
+		await window.pagefind?.preload?.(normalizedKeyword);
+	})();
 };
 
 const search = async (keyword: string, isDesktop: boolean): Promise<void> => {
@@ -164,10 +182,12 @@ onMount(() => {
 
 // 使用防抖版本的搜索
 $: if (initialized && keywordDesktop) {
+	preloadPagefindKeyword(keywordDesktop);
 	debouncedSearch(keywordDesktop, true);
 }
 
 $: if (initialized && keywordMobile) {
+	preloadPagefindKeyword(keywordMobile);
 	debouncedSearch(keywordMobile, false);
 }
 </script>

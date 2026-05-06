@@ -6,7 +6,9 @@ interface Pagefind {
 			data: () => Promise<SearchResult>;
 		}>;
 	}>;
+	init?: () => Promise<void>;
 	options?: (options: Record<string, unknown>) => Promise<void>;
+	preload?: (query: string) => Promise<void>;
 }
 
 declare global {

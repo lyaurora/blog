@@ -123,6 +123,7 @@ async function loadPagefind() {
             excerptLength: 20,
             noWorker: true
         });
+        await pagefind.init?.();
 
         window.pagefind = pagefind;
 
@@ -160,8 +161,8 @@ function bindPagefindTriggers() {
     }
 }
 
-function scheduleIdlePagefindLoad() {
-    const loadWhenIdle = () => {
+function schedulePagefindWarmup() {
+    const warmup = () => {
         if (
             window.__pagefindLoadPromise ||
             (window.pagefind && typeof window.pagefind.search === 'function')
@@ -169,23 +170,19 @@ function scheduleIdlePagefindLoad() {
             return;
         }
 
-        if ('requestIdleCallback' in window) {
-            window.requestIdleCallback(loadPagefind);
-        } else {
-            window.setTimeout(loadPagefind, 0);
-        }
+        window.setTimeout(loadPagefind, 250);
     };
 
     if (document.documentElement.classList.contains('entry-ready')) {
-        loadWhenIdle();
+        warmup();
     } else {
-        document.addEventListener('blog:entry-ready', loadWhenIdle, {once: true});
+        document.addEventListener('blog:entry-ready', warmup, {once: true});
     }
 }
 
 function setupPagefindLoader() {
     bindPagefindTriggers();
-    scheduleIdlePagefindLoad();
+    schedulePagefindWarmup();
 }
 
 if (document.readyState === 'loading') {
