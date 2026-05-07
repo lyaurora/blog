@@ -1,263 +1,251 @@
 ---
 // src/pages/bangumi.astro
-export const prerender = false;
+export const prerender = true;
 
+import { bangumiCollections } from "../lib/bangumi";
 import Layout from "../layouts/MainGridLayout.astro";
 
-// ------------------------------------------
-// ✅ 新增：添加缓存控制
-// ------------------------------------------
-// 告诉 CDN：缓存这个页面 21600 秒（6小时）。
-// 在这 6 小时内，无论多少人访问，都不会重新请求 Bangumi API。
-Astro.response.headers.set(
-	"Cache-Control",
-	"public, max-age=0, s-maxage=21600, stale-while-revalidate=604800",
-);
-
-// ------------------------------------------
-// ✅ 2. 获取精确到秒的当前时间
-// ------------------------------------------
-const lastUpdateDate = new Date()
-	.toLocaleString("zh-CN", {
-		year: "numeric", // 年
-		month: "2-digit", // 月
-		day: "2-digit", // 日
-		hour: "2-digit", // 时
-		minute: "2-digit", // 分
-		second: "2-digit", // 秒 (新增)
-		hour12: false, // 强制 24 小时制 (14:00 而不是 2:00 PM)
-		timeZone: "Asia/Shanghai", // 锁定北京时间
-	})
-	.replace(/\//g, "-"); // 把 2025/12/20 格式化为 2025-12-20
-
-// ==========================================
-// 🔧 配置区域
-// ==========================================
-import { siteConfig } from "../config";
-
-const USERNAME = siteConfig.bangumiUser;
-const USER_AGENT = "sai/astro-blog-tracker";
-
-// ==========================================
-// 📝 类型定义
-// ==========================================
-interface BangumiSubject {
-	id: number;
-	name: string;
-	name_cn: string;
-	images: {
-		large: string;
-		common: string;
-		medium: string;
-		small: string;
-		grid: string;
-	};
-	eps: number;
-	score: number;
-}
-
-interface BangumiItem {
-	subject: BangumiSubject;
-	ep_status: number;
-	rate: number;
-}
-
-interface BangumiCollection {
-	label: string;
-	type: number;
-	limit: number;
-	list: BangumiItem[];
-}
-
-interface BangumiCollectionPage {
-	total?: number;
-	data?: BangumiItem[];
-}
-
-interface BangumiCollectionRequest {
-	label: string;
-	type: number;
-	limit: number;
-}
-
-// limit: 100
-const collections: BangumiCollectionRequest[] = [
-	{ label: "正在追", type: 3, limit: 100 },
-	{ label: "补番计划", type: 1, limit: 100 },
-	{ label: "已看完", type: 2, limit: 100 },
-];
-
-async function fetchBangumiCollection(
-	type: number,
-	limit: number,
-): Promise<BangumiItem[]> {
-	const list: BangumiItem[] = [];
-	let offset = 0;
-
-	while (true) {
-		const url = `https://api.bgm.tv/v0/users/${USERNAME}/collections?subject_type=2&type=${type}&limit=${limit}&offset=${offset}`;
-		const res = await fetch(url, { headers: { "User-Agent": USER_AGENT } });
-
-		if (!res.ok) {
-			throw new Error(`Bangumi API error: ${res.status} ${res.statusText}`);
-		}
-
-		const json: BangumiCollectionPage = await res.json();
-		const page = Array.isArray(json.data) ? json.data : [];
-
-		if (page.length === 0) {
-			break;
-		}
-
-		list.push(...page);
-		offset += page.length;
-
-		if (typeof json.total === "number" && offset >= json.total) {
-			break;
-		}
-
-		if (page.length < limit) {
-			break;
-		}
-	}
-
-	return list;
-}
-
-const results: BangumiCollection[] = await Promise.all(
-	collections.map(async (col): Promise<BangumiCollection> => {
-		try {
-			if (!USERNAME) {
-				return { ...col, list: [] };
-			}
-			const list = await fetchBangumiCollection(col.type, col.limit);
-			return { ...col, list };
-		} catch (error) {
-			console.error(`Fetch error for type ${col.type}:`, error);
-			return { ...col, list: [] };
-		}
-	}),
-);
+const skeletonSections = bangumiCollections.slice(0, 2);
 ---
 
 <Layout title="我的番剧库">
-  
-  <div class="max-w-7xl mx-auto px-4 min-h-screen pt-24 pb-12">
-    
-    {/* 页面大标题 */}
-    <div class="mb-8 px-2">
-      <div class="flex items-end justify-between border-b-2 border-gray-100 dark:border-neutral-800 pb-2">
-        <div>
-          <h1 class="text-2xl font-bold text-gray-900 dark:text-white tracking-tight">
-            番剧收藏
-          </h1>
-          <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
-            Synced from Bangumi •
-            <span class="font-mono text-gray-400 dark:text-gray-500">
-              {lastUpdateDate}
-            </span>
-          </p>
-        </div>
-        <div class="text-right hidden sm:block">
-          <div class="text-3xl font-bold text-gray-400 dark:text-neutral-600">
-            {results.reduce((acc, cur) => acc + cur.list.length, 0)}
-          </div>
-        </div>
-      </div>
-    </div>
+	<div class="max-w-7xl mx-auto px-4 min-h-screen pt-24 pb-12">
+		<div class="mb-8 px-2">
+			<div class="flex items-end justify-between border-b-2 border-gray-100 dark:border-neutral-800 pb-2">
+				<div>
+					<h1 class="text-2xl font-bold text-gray-900 dark:text-white tracking-tight">
+						番剧收藏
+					</h1>
+					<p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
+						Synced from Bangumi •
+						<span id="bangumi-updated-at" class="font-mono text-gray-400 dark:text-gray-500" aria-live="polite">
+							少女祈祷中...
+						</span>
+					</p>
+				</div>
+				<div class="text-right hidden sm:block">
+					<div id="bangumi-total" class="text-3xl font-bold text-gray-400 dark:text-neutral-600">
+						--
+					</div>
+				</div>
+			</div>
+		</div>
 
-    {/* 列表区域 */}
-    {results.map((group) => {
-      if (group.list.length === 0) return null;
+		<div id="bangumi-list">
+			{skeletonSections.map((group, sectionIndex) => (
+				<div class="mb-12" data-bangumi-skeleton-section>
+					<div class="flex items-center gap-2 mb-4 px-2">
+						<div class="w-1 h-4 rounded-md shrink-0" style="background-color: var(--primary);"></div>
+						<h2 class="text-lg font-bold text-gray-800 dark:text-gray-200">{group.label}</h2>
+						<span class="text-xs font-mono text-[var(--btn-content)] bg-[var(--btn-regular-bg)] px-2 py-0.5 rounded-md ml-1">
+							...
+						</span>
+					</div>
+					<div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
+						{Array.from({ length: sectionIndex === 0 ? 10 : 5 }).map((_, index) => (
+							<div class="relative block w-full aspect-[2/3] rounded-xl overflow-hidden shadow-md bg-[var(--btn-regular-bg)] animate-pulse">
+								<div class:list={[
+									"absolute left-3 right-3 bottom-3 h-3.5 rounded-full bg-[var(--btn-content)] opacity-20",
+									index % 3 === 0 ? "w-5/6" : "w-3/4",
+								]}></div>
+							</div>
+						))}
+					</div>
+				</div>
+			))}
+		</div>
 
-      return (
-        <div class="mb-12">
-          {/* 分类标题：保持侧边栏同款样式 */}
-          <div class="flex items-center gap-2 mb-4 px-2">
-            
-            {/* 侧边栏风格装饰条：w-1 h-4 rounded-md + 主题色 */}
-            <div class="w-1 h-4 rounded-md shrink-0" style="background-color: var(--primary);"></div>
-            
-            <h2 class="text-lg font-bold text-gray-800 dark:text-gray-200">
-              {group.label}
-            </h2>
-            
-            <span class="text-xs font-mono text-gray-400 bg-gray-100 dark:bg-neutral-800 px-2 py-0.5 rounded-md ml-1">
-              {group.list.length}
-            </span>
-          </div>
+		<div id="bangumi-empty" class="hidden text-center py-20 text-gray-500">
+			<p>似乎无法连接到 Bangumi 或列表为空...</p>
+		</div>
+	</div>
 
-          <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
-            {group.list.map((item: BangumiItem) => {
-              const subject = item.subject;
-              const title = subject.name_cn || subject.name;
-              const cover = subject.images.large || subject.images.common;
-              const url = `https://bgm.tv/subject/${subject.id}`;
-              const progressText = `${item.ep_status} / ${subject.eps || '?'}`;
-              const publicScore = subject.score; 
-              const myScore = item.rate || 0;
+	<script is:inline>
+	(() => {
+		const cacheKey = "bangumi:snapshot:v1";
+		const apiUrl = "/api/bangumi.json";
+		const listElement = document.getElementById("bangumi-list");
+		const emptyElement = document.getElementById("bangumi-empty");
+		const totalElement = document.getElementById("bangumi-total");
+		const updatedAtElement = document.getElementById("bangumi-updated-at");
 
-              return (
-                <a href={url} target="_blank" rel="noopener noreferrer" 
-                   class="group relative block w-full aspect-[2/3] rounded-xl overflow-hidden shadow-md hover:shadow-2xl transition-all duration-300 hover:-translate-y-2 bg-gray-200 dark:bg-neutral-800 will-change-transform">
-                  
-                  <img 
-                    src={cover} 
-                    alt={title} 
-                    class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
-                    loading="lazy" referrerpolicy="no-referrer"
-                  />
-                  
-                  <div class="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-end p-4">
-                    
-                    <div class="transform translate-y-4 group-hover:translate-y-0 transition-transform duration-300 will-change-transform">
-                      <h3 class="text-white font-bold text-lg leading-tight mb-2 line-clamp-2 drop-shadow-md">
-                        {title}
-                      </h3>
-                      
-                      <div class="flex items-center justify-between text-xs text-gray-300 antialiased">
-                        <span class="bg-white/20 px-2 py-0.5 rounded border border-white/10">
-                           {progressText}
-                        </span>
-                        
-                        {myScore > 0 ? (
-                          /* 🟢 修复点：改回 text-yellow-400，去掉 style 主题色 */
-                          <span class="text-yellow-400 font-bold flex items-center gap-1 drop-shadow-md bg-white/10 px-1.5 py-0.5 rounded">
-                            ★ {myScore}
-                          </span>
-                        ) : (
-                          <span class="text-gray-400">未评分</span>
-                        )}
-                      </div>
-                    </div>
-                  </div>
+		if (!listElement || !emptyElement || !totalElement || !updatedAtElement) {
+			return;
+		}
 
-                  <div class="absolute top-2 left-2 bg-black/60 backdrop-blur-md text-white text-[10px] px-2 py-1 rounded-md border border-white/10 shadow-sm z-10 antialiased">
-                    {item.ep_status}话
-                  </div>
+		function escapeHTML(value) {
+			return String(value ?? "")
+				.replace(/&/g, "&amp;")
+				.replace(/</g, "&lt;")
+				.replace(/>/g, "&gt;")
+				.replace(/"/g, "&quot;")
+				.replace(/'/g, "&#39;");
+		}
 
-                  {publicScore && (
-                     <div class="absolute top-2 right-2 flex items-center gap-1 z-10
-                                 bg-neutral-900/80 backdrop-blur-md
-                                 text-[10px] text-white
-                                 px-2 py-0.5 rounded-md
-                                 shadow-sm border border-white/10 antialiased">
-                       <span class="text-neutral-400 text-[8px] uppercase tracking-wider font-semibold">Bgm</span>
-                       <span class="font-bold text-yellow-400">{publicScore}</span>
-                     </div>
-                  )}
-                </a>
-              )
-            })}
-          </div>
-        </div>
-      );
-    })}
+		function isSnapshot(value) {
+			return Boolean(value && Array.isArray(value.collections));
+		}
 
-    {results.every(g => g.list.length === 0) && (
-      <div class="text-center py-20 text-gray-500">
-        <p>似乎无法连接到 Bangumi 或列表为空...</p>
-      </div>
-    )}
-  </div>
+		function hasItems(snapshot) {
+			return snapshot.collections.some((group) => Array.isArray(group.list) && group.list.length > 0);
+		}
+
+		function getTotal(snapshot) {
+			return snapshot.collections.reduce((total, group) => total + (Array.isArray(group.list) ? group.list.length : 0), 0);
+		}
+
+		function getCover(subject) {
+			return subject?.images?.large || subject?.images?.common || subject?.images?.medium || subject?.images?.grid || "";
+		}
+
+		function renderCard(item) {
+			const subject = item.subject || {};
+			const title = subject.name_cn || subject.name || "Untitled";
+			const cover = getCover(subject);
+			const subjectUrl = `https://bgm.tv/subject/${subject.id}`;
+			const progressText = `${item.ep_status ?? 0} / ${subject.eps || "?"}`;
+			const publicScore = Number(subject.score || 0);
+			const myScore = Number(item.rate || 0);
+
+			return `
+				<a href="${escapeHTML(subjectUrl)}" target="_blank" rel="noopener noreferrer"
+				   class="group relative block w-full aspect-[2/3] rounded-xl overflow-hidden shadow-md hover:shadow-2xl transition-all duration-300 hover:-translate-y-2 bg-gray-200 dark:bg-neutral-800 will-change-transform">
+					${cover ? `
+						<img
+							src="${escapeHTML(cover)}"
+							alt="${escapeHTML(title)}"
+							class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+							loading="lazy"
+							referrerpolicy="no-referrer"
+						/>
+					` : ""}
+					<div class="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-end p-4">
+						<div class="transform translate-y-4 group-hover:translate-y-0 transition-transform duration-300 will-change-transform">
+							<h3 class="text-white font-bold text-lg leading-tight mb-2 line-clamp-2 drop-shadow-md">
+								${escapeHTML(title)}
+							</h3>
+							<div class="flex items-center justify-between text-xs text-gray-300 antialiased">
+								<span class="bg-white/20 px-2 py-0.5 rounded border border-white/10">
+									${escapeHTML(progressText)}
+								</span>
+								${myScore > 0 ? `
+									<span class="text-yellow-400 font-bold flex items-center gap-1 drop-shadow-md bg-white/10 px-1.5 py-0.5 rounded">
+										★ ${myScore}
+									</span>
+								` : `
+									<span class="text-gray-400">未评分</span>
+								`}
+							</div>
+						</div>
+					</div>
+					<div class="absolute top-2 left-2 bg-black/60 backdrop-blur-md text-white text-[10px] px-2 py-1 rounded-md border border-white/10 shadow-sm z-10 antialiased">
+						${escapeHTML(item.ep_status ?? 0)}话
+					</div>
+					${publicScore ? `
+						<div class="absolute top-2 right-2 flex items-center gap-1 z-10 bg-neutral-900/80 backdrop-blur-md text-[10px] text-white px-2 py-0.5 rounded-md shadow-sm border border-white/10 antialiased">
+							<span class="text-neutral-400 text-[8px] uppercase tracking-wider font-semibold">Bgm</span>
+							<span class="font-bold text-yellow-400">${publicScore}</span>
+						</div>
+					` : ""}
+				</a>
+			`;
+		}
+
+		function renderGroup(group) {
+			if (!Array.isArray(group.list) || group.list.length === 0) return "";
+
+			return `
+				<div class="mb-12">
+					<div class="flex items-center gap-2 mb-4 px-2">
+						<div class="w-1 h-4 rounded-md shrink-0" style="background-color: var(--primary);"></div>
+						<h2 class="text-lg font-bold text-gray-800 dark:text-gray-200">
+							${escapeHTML(group.label)}
+						</h2>
+						<span class="text-xs font-mono text-[var(--btn-content)] bg-[var(--btn-regular-bg)] px-2 py-0.5 rounded-md ml-1">
+							${group.list.length}
+						</span>
+					</div>
+					<div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
+						${group.list.map(renderCard).join("")}
+					</div>
+				</div>
+			`;
+		}
+
+		function renderSnapshot(snapshot) {
+			if (!isSnapshot(snapshot) || !hasItems(snapshot)) {
+				listElement.classList.add("hidden");
+				emptyElement.classList.remove("hidden");
+				totalElement.textContent = "--";
+				updatedAtElement.textContent = "暂无快照";
+				return;
+			}
+
+			listElement.innerHTML = snapshot.collections.map(renderGroup).join("");
+			listElement.classList.remove("hidden");
+			emptyElement.classList.add("hidden");
+			totalElement.textContent = String(getTotal(snapshot));
+			updatedAtElement.textContent = snapshot.updatedAt || "未知时间";
+		}
+
+		function readCachedSnapshot() {
+			try {
+				const raw = localStorage.getItem(cacheKey);
+				if (!raw) return undefined;
+				const snapshot = JSON.parse(raw);
+				return isSnapshot(snapshot) ? snapshot : undefined;
+			} catch {
+				return undefined;
+			}
+		}
+
+		function writeCachedSnapshot(snapshot) {
+			try {
+				localStorage.setItem(cacheKey, JSON.stringify(snapshot));
+			} catch {
+				// Ignore storage quota/private browsing failures.
+			}
+		}
+
+		async function syncBangumi() {
+			const cachedSnapshot = readCachedSnapshot();
+			if (cachedSnapshot && hasItems(cachedSnapshot)) {
+				renderSnapshot(cachedSnapshot);
+			}
+
+			try {
+				const response = await fetch(apiUrl);
+				if (!response.ok) {
+					throw new Error(`Bangumi snapshot request failed: ${response.status}`);
+				}
+
+				const payload = await response.json();
+				if (!payload?.snapshot || !isSnapshot(payload.snapshot)) {
+					throw new Error("Invalid Bangumi snapshot payload");
+				}
+
+				if (hasItems(payload.snapshot)) {
+					writeCachedSnapshot(payload.snapshot);
+					renderSnapshot(payload.snapshot);
+					return;
+				}
+
+				if (!cachedSnapshot || !hasItems(cachedSnapshot)) {
+					renderSnapshot(payload.snapshot);
+				}
+			} catch (error) {
+				console.error(error);
+				if (cachedSnapshot && hasItems(cachedSnapshot)) {
+					renderSnapshot(cachedSnapshot);
+				} else {
+					listElement.classList.add("hidden");
+					emptyElement.classList.remove("hidden");
+					updatedAtElement.textContent = "少女祈祷失败";
+				}
+			}
+		}
+
+		syncBangumi();
+	})();
+	</script>
 </Layout>
