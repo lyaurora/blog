@@ -10,7 +10,7 @@ import DisplaySettings from "./widget/DisplaySettings.svelte";
 import NavMenuPanel from "./widget/NavMenuPanel.astro";
 
 const className = Astro.props.class;
-const pagefindScriptUrl = url("/pagefind/pagefind.js");
+const pagefindScriptUrl = `${url("/pagefind/pagefind.js")}?v=${Date.now()}`;
 
 let links: NavBarLink[] = navBarConfig.links.map(
 	(item: NavBarLink | LinkPreset): NavBarLink => {
@@ -123,7 +123,6 @@ async function loadPagefind() {
             excerptLength: 20,
             noWorker: true
         });
-        await pagefind.init?.();
 
         window.pagefind = pagefind;
 
@@ -161,28 +160,18 @@ function bindPagefindTriggers() {
     }
 }
 
-function schedulePagefindWarmup() {
-    const warmup = () => {
-        if (
-            window.__pagefindLoadPromise ||
-            (window.pagefind && typeof window.pagefind.search === 'function')
-        ) {
-            return;
-        }
-
-        window.setTimeout(loadPagefind, 250);
-    };
-
-    if (document.documentElement.classList.contains('entry-ready')) {
-        warmup();
+function scheduleIdlePagefindLoad() {
+    const load = () => loadPagefind();
+    if ('requestIdleCallback' in window) {
+        window.requestIdleCallback(load, { timeout: 5000 });
     } else {
-        document.addEventListener('blog:entry-ready', warmup, {once: true});
+        window.setTimeout(load, 3000);
     }
 }
 
 function setupPagefindLoader() {
     bindPagefindTriggers();
-    schedulePagefindWarmup();
+    scheduleIdlePagefindLoad();
 }
 
 if (document.readyState === 'loading') {

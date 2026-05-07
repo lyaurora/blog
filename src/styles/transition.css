@@ -18,31 +18,12 @@ html.is-animating .transition-swup-fade {
     }
 }
 
-@keyframes banner-entry {
-    0% {
-        opacity: 0;
-        transform: translate(var(--tw-translate-x), var(--tw-translate-y)) rotate(var(--tw-rotate)) skewX(var(--tw-skew-x)) skewY(var(--tw-skew-y)) scaleX(1.05) scaleY(1.05);
-    }
-    100% {
-        opacity: 1;
-        transform: translate(var(--tw-translate-x), var(--tw-translate-y)) rotate(var(--tw-rotate)) skewX(var(--tw-skew-x)) skewY(var(--tw-skew-y)) scaleX(1) scaleY(1);
-    }
-}
-
 /* Main components */
 .onload-animation {
     opacity: 0;
     animation: 300ms fade-in-up both;
     will-change: opacity, transform;
     backface-visibility: hidden;
-}
-html.entry-pending .onload-animation {
-    opacity: 0;
-    transform: translate3d(0, 2rem, 0);
-    animation: none !important;
-}
-#banner.banner-entry-animation {
-    animation: 700ms banner-entry cubic-bezier(0.4, 0, 0.2, 1) both;
 }
 #navbar {
     animation-delay: 0ms
