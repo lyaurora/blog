@@ -20,8 +20,6 @@ import { defaultFavicons } from "../constants/icon";
 import type { Favicon } from "../types/config";
 import { pathsEqual, url } from "../utils/url-utils";
 import "katex/dist/katex.css";
-import Analytics from "@vercel/analytics/astro";
-import SpeedInsights from "@vercel/speed-insights/astro";
 
 interface Props {
 	title?: string;
@@ -171,8 +169,7 @@ const bannerOffset =
 		<ConfigCarrier></ConfigCarrier>
 		<slot />
         <MusicPlayer client:idle />
-		<Analytics />
-		<SpeedInsights />
+		<!-- Temporarily disabled for flicker isolation -->
 
 		<!-- increase the page height during page transition to prevent the scrolling animation from jumping -->
 		<div id="page-height-extend" class="hidden h-[300vh]"></div>
