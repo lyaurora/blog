@@ -68,6 +68,7 @@ const skeletonSections = bangumiCollections.slice(0, 2);
 		const emptyElement = document.getElementById("bangumi-empty");
 		const totalElement = document.getElementById("bangumi-total");
 		const updatedAtElement = document.getElementById("bangumi-updated-at");
+		let renderedSnapshotSignature = "";
 
 		if (!listElement || !emptyElement || !totalElement || !updatedAtElement) {
 			return;
@@ -96,6 +97,35 @@ const skeletonSections = bangumiCollections.slice(0, 2);
 
 		function getCover(subject) {
 			return subject?.images?.large || subject?.images?.common || subject?.images?.medium || subject?.images?.grid || "";
+		}
+
+		function getSnapshotSignature(snapshot) {
+			if (!isSnapshot(snapshot)) return "";
+
+			const normalizedCollections = snapshot.collections.map((group) => {
+				const list = Array.isArray(group.list) ? group.list : [];
+				const items = list.map((item) => {
+					const subject = item.subject || {};
+					return {
+						id: subject.id ?? "",
+						nameCn: subject.name_cn ?? "",
+						name: subject.name ?? "",
+						cover: getCover(subject),
+						eps: subject.eps ?? "",
+						score: subject.score ?? "",
+						epStatus: item.ep_status ?? "",
+						rate: item.rate ?? "",
+					};
+				});
+
+				return {
+					type: group.type ?? "",
+					label: group.label ?? "",
+					items,
+				};
+			});
+
+			return JSON.stringify(normalizedCollections);
 		}
 
 		function renderCard(item) {
@@ -172,8 +202,14 @@ const skeletonSections = bangumiCollections.slice(0, 2);
 			`;
 		}
 
+		function updateSnapshotMeta(snapshot) {
+			totalElement.textContent = String(getTotal(snapshot));
+			updatedAtElement.textContent = snapshot.updatedAt || "未知时间";
+		}
+
 		function renderSnapshot(snapshot) {
 			if (!isSnapshot(snapshot) || !hasItems(snapshot)) {
+				renderedSnapshotSignature = "";
 				listElement.classList.add("hidden");
 				emptyElement.classList.remove("hidden");
 				totalElement.textContent = "--";
@@ -181,11 +217,19 @@ const skeletonSections = bangumiCollections.slice(0, 2);
 				return;
 			}
 
+			const snapshotSignature = getSnapshotSignature(snapshot);
+			if (snapshotSignature && snapshotSignature === renderedSnapshotSignature) {
+				listElement.classList.remove("hidden");
+				emptyElement.classList.add("hidden");
+				updateSnapshotMeta(snapshot);
+				return;
+			}
+
 			listElement.innerHTML = snapshot.collections.map(renderGroup).join("");
+			renderedSnapshotSignature = snapshotSignature;
 			listElement.classList.remove("hidden");
 			emptyElement.classList.add("hidden");
-			totalElement.textContent = String(getTotal(snapshot));
-			updatedAtElement.textContent = snapshot.updatedAt || "未知时间";
+			updateSnapshotMeta(snapshot);
 		}
 
 		function readCachedSnapshot() {
@@ -207,6 +251,35 @@ const skeletonSections = bangumiCollections.slice(0, 2);
 			}
 		}
 
+		function requestSnapshot() {
+			if (typeof window.__warmBangumiSnapshot === "function") {
+				return window.__warmBangumiSnapshot();
+			}
+
+			if (window.__bangumiSnapshotPromise) {
+				return window.__bangumiSnapshotPromise;
+			}
+
+			const request = fetch(apiUrl, {
+				headers: {
+					Accept: "application/json",
+				},
+			}).then((response) => {
+				if (!response.ok) {
+					throw new Error(`Bangumi snapshot request failed: ${response.status}`);
+				}
+
+				return response.json();
+			});
+
+			window.__bangumiSnapshotPromise = request.catch((error) => {
+				window.__bangumiSnapshotPromise = undefined;
+				throw error;
+			});
+
+			return window.__bangumiSnapshotPromise;
+		}
+
 		async function syncBangumi() {
 			const cachedSnapshot = readCachedSnapshot();
 			if (cachedSnapshot && hasItems(cachedSnapshot)) {
@@ -214,12 +287,7 @@ const skeletonSections = bangumiCollections.slice(0, 2);
 			}
 
 			try {
-				const response = await fetch(apiUrl);
-				if (!response.ok) {
-					throw new Error(`Bangumi snapshot request failed: ${response.status}`);
-				}
-
-				const payload = await response.json();
+				const payload = await requestSnapshot();
 				if (!payload?.snapshot || !isSnapshot(payload.snapshot)) {
 					throw new Error("Invalid Bangumi snapshot payload");
 				}

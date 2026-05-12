@@ -102,7 +102,166 @@ function loadButtonScript() {
     }
 }
 
+const bangumiSnapshotCacheKey = "bangumi:snapshot:v1";
+const bangumiSnapshotApiUrl = "/bangumi/bangumi.json";
+const bangumiSnapshotPromiseMaxAge = 30 * 1000;
+
+function isBangumiSnapshot(value: unknown): value is BangumiSnapshot {
+    return Boolean(
+        typeof value === "object"
+        && value !== null
+        && Array.isArray((value as { collections?: unknown }).collections)
+    );
+}
+
+function hasBangumiSnapshotItems(snapshot: unknown) {
+    return isBangumiSnapshot(snapshot)
+        && snapshot.collections.some((group) => Array.isArray(group.list) && group.list.length > 0);
+}
+
+function readBangumiSnapshotCache() {
+    try {
+        const raw = localStorage.getItem(bangumiSnapshotCacheKey);
+        if (!raw) return undefined;
+        const snapshot = JSON.parse(raw);
+        return isBangumiSnapshot(snapshot) ? snapshot : undefined;
+    } catch {
+        return undefined;
+    }
+}
+
+function writeBangumiSnapshotCache(snapshot: BangumiSnapshot) {
+    try {
+        localStorage.setItem(bangumiSnapshotCacheKey, JSON.stringify(snapshot));
+    } catch {
+        // Ignore storage quota/private browsing failures.
+    }
+}
+
+function getReusableBangumiSnapshotPromise() {
+    const promise = window.__bangumiSnapshotPromise;
+    const startedAt = Number(window.__bangumiSnapshotPromiseStartedAt || 0);
+
+    if (promise && startedAt && Date.now() - startedAt < bangumiSnapshotPromiseMaxAge) {
+        return promise;
+    }
+
+    return undefined;
+}
+
+function warmBangumiSnapshot() {
+    const existing = getReusableBangumiSnapshotPromise();
+    if (existing) return existing;
+
+    const request = fetch(bangumiSnapshotApiUrl, {
+        headers: {
+            Accept: "application/json",
+        },
+    }).then((response) => {
+        if (!response.ok) {
+            throw new Error(`Bangumi snapshot warmup failed: ${response.status}`);
+        }
+
+        return response.json();
+    }).then((payload: BangumiSnapshotPayload) => {
+        if (isBangumiSnapshot(payload?.snapshot)) {
+            writeBangumiSnapshotCache(payload.snapshot);
+            document.dispatchEvent(new CustomEvent("bangumi:snapshot-ready", {
+                detail: payload.snapshot,
+            }));
+        }
+
+        return payload;
+    });
+
+    window.__bangumiSnapshotPromiseStartedAt = Date.now();
+    window.__bangumiSnapshotPromise = request.catch((error) => {
+        window.__bangumiSnapshotPromise = undefined;
+        window.__bangumiSnapshotPromiseStartedAt = 0;
+        throw error;
+    });
+
+    return window.__bangumiSnapshotPromise;
+}
+
+window.__warmBangumiSnapshot = warmBangumiSnapshot;
+
+function isBangumiLink(link: HTMLAnchorElement) {
+    const href = link.getAttribute("href");
+    if (!href) return false;
+
+    try {
+        const target = new URL(href, window.location.origin);
+        return target.origin === window.location.origin && target.pathname === "/bangumi/";
+    } catch {
+        return href === "/bangumi/";
+    }
+}
+
+function bindBangumiWarmupTriggers(root: ParentNode = document) {
+    const links = root.querySelectorAll("a[href]");
+    const startWarmup = () => {
+        warmBangumiSnapshot().catch(() => undefined);
+    };
+
+    for (const link of links) {
+        if (!(link instanceof HTMLAnchorElement)) continue;
+        if (!isBangumiLink(link) || link.dataset.bangumiWarmupBound === "true") continue;
+
+        link.dataset.bangumiWarmupBound = "true";
+        link.addEventListener("pointerenter", startWarmup, { passive: true });
+        link.addEventListener("focusin", startWarmup);
+        link.addEventListener("touchstart", startWarmup, { passive: true });
+        link.addEventListener("pointerdown", startWarmup, { passive: true });
+    }
+}
+
+function scheduleBangumiSnapshotWarmup() {
+    if (window.location.pathname === "/bangumi/") return;
+
+    const warmupIfMissing = () => {
+        if (hasBangumiSnapshotItems(readBangumiSnapshotCache())) return;
+
+        const runWarmup = () => {
+            warmBangumiSnapshot().catch(() => undefined);
+        };
+
+        if ("requestIdleCallback" in window) {
+            window.requestIdleCallback(runWarmup, { timeout: 2500 });
+        } else {
+            setTimeout(runWarmup, 1200);
+        }
+    };
+
+    if (document.documentElement.classList.contains("entry-ready")) {
+        setTimeout(warmupIfMissing, 800);
+    } else {
+        document.addEventListener("blog:entry-ready", () => {
+            setTimeout(warmupIfMissing, 800);
+        }, { once: true });
+    }
+}
+
+function setupBangumiSnapshotWarmup() {
+    bindBangumiWarmupTriggers();
+    scheduleBangumiSnapshotWarmup();
+
+    const bindAfterSwupPageView = () => {
+        window.swup?.hooks?.on("page:view", () => bindBangumiWarmupTriggers());
+    };
+
+    if (window.swup?.hooks) {
+        bindAfterSwupPageView();
+    } else {
+        document.addEventListener("swup:enable", bindAfterSwupPageView, { once: true });
+    }
+}
+
 loadButtonScript();
+if (!window.__bangumiSnapshotWarmupSetup) {
+    window.__bangumiSnapshotWarmupSetup = true;
+    setupBangumiSnapshotWarmup();
+}
 </script>
 
 {import.meta.env.PROD && <script is:inline define:vars={{scriptUrl: pagefindScriptUrl}}>

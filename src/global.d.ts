@@ -12,12 +12,31 @@ interface Pagefind {
 }
 
 declare global {
+	interface BangumiSnapshot {
+		updatedAt?: string;
+		collections: Array<{
+			type?: number;
+			label?: string;
+			list?: unknown[];
+		}>;
+	}
+
+	interface BangumiSnapshotPayload {
+		ok?: boolean;
+		source?: string;
+		snapshot?: BangumiSnapshot;
+	}
+
 	interface Window {
 		// type from '@swup/astro' is incorrect
 		swup: AstroIntegration;
 		pagefind?: Pagefind;
 		loadPagefind?: () => Promise<Pagefind | null>;
 		__pagefindLoadPromise?: Promise<Pagefind | null>;
+		__warmBangumiSnapshot?: () => Promise<BangumiSnapshotPayload>;
+		__bangumiSnapshotPromise?: Promise<BangumiSnapshotPayload>;
+		__bangumiSnapshotPromiseStartedAt?: number;
+		__bangumiSnapshotWarmupSetup?: boolean;
 	}
 }
 
