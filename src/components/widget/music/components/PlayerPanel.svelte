@@ -24,25 +24,25 @@ $: isLightBackground =
 	160;
 $: foregroundClass = isLightBackground ? "text-neutral-900" : "text-white";
 $: mutedForegroundClass = isLightBackground
-	? "text-neutral-800/65"
-	: "text-white/60";
+	? "text-neutral-800/75"
+	: "text-white/65";
 $: subtleForegroundClass = isLightBackground
-	? "text-neutral-800/45"
-	: "text-white/50";
+	? "text-neutral-800/60"
+	: "text-white/55";
 $: titleForegroundClass = isLightBackground
-	? "text-neutral-900/80"
+	? "text-neutral-900"
 	: "text-white";
-$: titleWeightClass = isLightBackground ? "font-medium" : "font-semibold";
+$: titleWeightClass = "font-semibold";
 $: artistForegroundClass = isLightBackground
-	? "text-neutral-700/60"
-	: "text-white/75";
+	? "text-neutral-800/75"
+	: "text-white/80";
 $: panelShadow = isLightBackground
-	? "0 25px 50px -12px rgba(0, 0, 0, 0.28), inset 0 0 0 1px rgba(0, 0, 0, 0.08)"
-	: "0 25px 50px -12px rgba(0, 0, 0, 0.5), inset 0 0 0 1px rgba(255, 255, 255, 0.1)";
+	? "0 4px 6px rgba(0, 0, 0, 0.04), 0 15px 25px rgba(0, 0, 0, 0.08), 0 30px 60px rgba(0, 0, 0, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.2)"
+	: "0 4px 6px rgba(0, 0, 0, 0.2), 0 15px 25px rgba(0, 0, 0, 0.3), 0 30px 60px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.1)";
 </script>
 
 <div 
-    class="absolute bottom-0 left-0 mb-0 w-60 rounded-2xl overflow-hidden shadow-2xl transition-all duration-300 origin-bottom-left font-sans text-shadow-sm"
+    class="absolute bottom-0 left-0 mb-0 w-60 rounded-2xl overflow-hidden before:absolute before:inset-0 before:bg-[url('data:image/svg+xml,%3Csvg viewBox=%220 0 200 200%22 xmlns=%22http://www.w3.org/2000/svg%22%3E%3Cfilter id=%22noiseFilter%22%3E%3CfeTurbulence type=%22fractalNoise%22 baseFrequency=%220.65%22 numOctaves=%223%22 stitchTiles=%22stitch%22/%3E%3C/filter%3E%3Crect width=%22100%25%22 height=%22100%25%22 filter=%22url(%23noiseFilter)%22 opacity=%220.03%22/%3E%3C/svg%3E')] before:opacity-100 before:mix-blend-overlay before:pointer-events-none before:z-[1] transition-all duration-300 origin-bottom-left font-sans text-shadow-sm"
     class:opacity-100={$isExpanded}
     class:translate-y-0={$isExpanded}
     class:scale-100={$isExpanded}
@@ -51,7 +51,7 @@ $: panelShadow = isLightBackground
     class:translate-y-4={!$isExpanded}
     class:scale-95={!$isExpanded}
     class:pointer-events-none={!$isExpanded}
-    style="background: rgba({$primaryColor[0]}, {$primaryColor[1]}, {$primaryColor[2]}, 0.95); backdrop-filter: blur(20px); box-shadow: {panelShadow}; --player-play-bg: {isLightBackground ? 'rgba(255, 255, 255, 0.86)' : 'rgb(255, 255, 255)'}; --player-play-icon: {isLightBackground ? 'rgb(38, 38, 38)' : 'rgb(0, 0, 0)'}; --player-progress-track: {isLightBackground ? 'rgba(38, 38, 38, 0.16)' : 'rgba(255, 255, 255, 0.22)'}; --player-progress-fill: {isLightBackground ? 'rgba(38, 38, 38, 0.48)' : 'rgba(255, 255, 255, 0.78)'}; --player-progress-fill-hover: {isLightBackground ? 'rgba(38, 38, 38, 0.6)' : 'rgba(255, 255, 255, 0.9)'}; --player-progress-thumb: {isLightBackground ? 'rgba(38, 38, 38, 0.62)' : 'rgba(255, 255, 255, 0.9)'};"
+    style="background: rgba({$primaryColor[0]}, {$primaryColor[1]}, {$primaryColor[2]}, 0.65); backdrop-filter: blur(40px); box-shadow: {panelShadow}; --player-play-bg: {isLightBackground ? 'rgba(255, 255, 255, 0.45)' : 'rgba(255, 255, 255, 0.15)'}; --player-play-icon: {isLightBackground ? 'rgba(0, 0, 0, 0.7)' : 'rgba(255, 255, 255, 0.9)'}; --player-progress-track: {isLightBackground ? 'rgba(38, 38, 38, 0.16)' : 'rgba(255, 255, 255, 0.22)'}; --player-progress-fill: {isLightBackground ? 'rgba(38, 38, 38, 0.48)' : 'rgba(255, 255, 255, 0.78)'}; --player-progress-fill-hover: {isLightBackground ? 'rgba(38, 38, 38, 0.6)' : 'rgba(255, 255, 255, 0.9)'}; --player-progress-thumb: {isLightBackground ? 'rgba(38, 38, 38, 0.62)' : 'rgba(255, 255, 255, 0.9)'};"
     role="dialog"
     aria-label="Music Player"
     tabindex="-1"
@@ -64,7 +64,7 @@ $: panelShadow = isLightBackground
     <Cover />
 
     <!-- 歌曲信息（移出遮罩区域以确保可见性） -->
-    <div class="px-5 -mt-10 relative z-10 mb-2 {titleForegroundClass}" style="text-shadow: {isLightBackground ? '0 1px 2px rgba(255,255,255,0.35)' : '0 2px 4px rgba(0,0,0,0.35)'};">
+    <div class="px-5 -mt-10 relative z-10 mb-2 {titleForegroundClass}" style="text-shadow: {isLightBackground ? '0 0 8px rgba(255,255,255,0.6), 0 1px 2px rgba(255,255,255,0.4)' : '0 2px 6px rgba(0,0,0,0.5), 0 0 3px rgba(0,0,0,0.2)'};">
         <div class="text-[1.05rem] leading-6 {titleWeightClass} truncate">{$currentSong?.title}</div>
         <div class="text-[0.72rem] leading-4 truncate mt-0.5 font-medium {artistForegroundClass}">{$currentSong?.author}</div>
     </div>

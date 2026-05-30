@@ -84,9 +84,9 @@ $: if ($currentSong && $isExpanded && $currentSong.pic !== lastColorPic) {
 
 <div 
     class="relative h-44 w-full group"
-    style="-webkit-mask-image: linear-gradient(to bottom, black 50%, transparent 100%); mask-image: linear-gradient(to bottom, black 50%, transparent 100%);"
+    style="-webkit-mask-image: linear-gradient(to bottom, black 40%, rgba(0,0,0,0.8) 60%, transparent 100%); mask-image: linear-gradient(to bottom, black 40%, rgba(0,0,0,0.8) 60%, transparent 100%);"
 >
-    <div class="absolute inset-0 bg-gray-800 animate-pulse" class:hidden={imageLoaded}></div>
+    <div class="absolute inset-0 bg-gray-800 animate-pulse z-[-1]" class:hidden={imageLoaded}></div>
     <img 
         bind:this={coverImg}
         src={$currentSong?.pic} 
@@ -97,6 +97,9 @@ $: if ($currentSong && $isExpanded && $currentSong.pic !== lastColorPic) {
         crossorigin="anonymous"
         on:load={handleImageLoad}
     />
+    
+    <!-- Specular highlight -->
+    <div class="absolute inset-0 bg-gradient-to-br from-white/[0.12] via-transparent to-transparent pointer-events-none z-[1]"></div>
     
     <!-- 顶部控制：关闭 -->
     <button 

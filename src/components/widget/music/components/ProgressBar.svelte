@@ -92,7 +92,7 @@ function handleSeekEnd(e: PointerEvent) {
 		>
 			<div
 				class="absolute right-0 top-1/2 -translate-y-1/2 translate-x-1/2 w-2.5 h-2.5 rounded-full shadow-md transition-opacity"
-				style="opacity: {isDragging ? 1 : hasProgress ? 0.65 : 0}; background: var(--player-progress-thumb);"
+				style="opacity: {isDragging ? 1 : hasProgress ? 0.65 : 0}; background: var(--player-progress-thumb); box-shadow: 0 0 6px 1px var(--player-progress-thumb);"
 			></div>
 		</div>
 	</div>

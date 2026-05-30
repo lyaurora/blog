@@ -17,6 +17,7 @@ import {
 	isAudioLoading,
 	isExpanded,
 	isPlaying,
+	primaryColor,
 	isSeeking,
 	progress,
 	setAudioElement,
@@ -188,6 +189,13 @@ $: if ($currentSong) {
         class:duration-300={mounted}
         style={playerStyle}
     >
+        <!-- Ambient color glow -->
+        <div 
+            class="absolute bottom-4 left-4 w-52 h-72 rounded-3xl pointer-events-none -z-10 transition-opacity duration-700"
+            class:opacity-0={!$isExpanded}
+            style="background: rgb({$primaryColor[0]}, {$primaryColor[1]}, {$primaryColor[2]}); filter: blur(50px); opacity: {$isExpanded ? 0.35 : 0};"
+        ></div>
+
         <PlayerPanel {audio} />
 
         <!-- Floating Button (Collapsed) -->
@@ -202,7 +210,7 @@ $: if ($currentSong) {
             class:pointer-events-none={$isExpanded}
             class:animate-spin-slow={$isPlaying}
             on:click|stopPropagation={toggleExpand}
-            style="animation-duration: 10s;"
+            style="animation-duration: 10s; {$isPlaying ? `box-shadow: 0 0 18px 4px rgba(${$primaryColor[0]}, ${$primaryColor[1]}, ${$primaryColor[2]}, 0.3), 0 4px 12px rgba(0,0,0,0.2)` : `box-shadow: 0 4px 12px rgba(0,0,0,0.2)`};"
             aria-label="Open music player"
         >
             <!-- Layer 1: Vinyl Record Placeholder (Always visible) -->

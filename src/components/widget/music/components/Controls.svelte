@@ -90,8 +90,8 @@ function handleModeSwitch() {
         
         <button 
             type="button"
-            class="w-8 h-8 flex items-center justify-center rounded-full hover:scale-105 transition shadow-lg active:scale-95"
-            style="background: var(--player-play-bg); color: var(--player-play-icon);"
+            class="w-8 h-8 flex items-center justify-center rounded-full hover:scale-105 transition active:scale-95"
+            style="background: var(--player-play-bg); color: var(--player-play-icon); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); box-shadow: 0 2px 8px rgba(0,0,0,0.1), 0 4px 16px rgba(0,0,0,0.06), inset 0 1px 0 rgba(255,255,255,0.25);"
             on:click={togglePlay}
             aria-label={$isAudioLoading ? "Loading" : $isPlaying ? "Pause" : "Play"}
         >
