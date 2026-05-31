@@ -83,7 +83,7 @@ $: panelShadow = isLightBackground
         <Controls>
             <div slot="right-controls" class="flex items-center gap-1">
                 <!-- 音量控制 -->
-                <VolumeControl />
+                <VolumeControl {isLightBackground} />
 
                 <!-- 播放列表切换 -->
                 <button type="button" class="text-current opacity-65 hover:opacity-100 transition p-1.5" on:click={togglePlaylist} class:opacity-100={$showPlaylist} aria-label="Toggle playlist">

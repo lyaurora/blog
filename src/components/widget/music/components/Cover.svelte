@@ -104,7 +104,7 @@ $: if ($currentSong && $isExpanded && $currentSong.pic !== lastColorPic) {
     <!-- 顶部控制：关闭 -->
     <button 
         type="button"
-        class="absolute top-3 right-3 p-2 rounded-full transition-all backdrop-blur-sm z-20"
+        class="absolute top-3 right-3 p-2 rounded-full transition-all z-20" style="backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);"
         class:bg-white-40={isLightBackground}
         class:hover:bg-white-60={isLightBackground}
         class:text-neutral-800={isLightBackground}
@@ -120,9 +120,9 @@ $: if ($currentSong && $isExpanded && $currentSong.pic !== lastColorPic) {
 </div>
 
 <style>
-    .bg-white-40 { background-color: rgba(255, 255, 255, 0.4); }
-    .hover\:bg-white-60:hover { background-color: rgba(255, 255, 255, 0.6); }
-    .bg-black-20 { background-color: rgba(0, 0, 0, 0.2); }
-    .hover\:bg-black-40:hover { background-color: rgba(0, 0, 0, 0.4); }
+    .bg-white-40 { background-color: rgba(255, 255, 255, 0.3); box-shadow: 0 2px 8px rgba(0,0,0,0.06), inset 0 1px 0 rgba(255,255,255,0.25); }
+    .hover\:bg-white-60:hover { background-color: rgba(255, 255, 255, 0.45); }
+    .bg-black-20 { background-color: rgba(0, 0, 0, 0.2); box-shadow: 0 2px 8px rgba(0,0,0,0.15), inset 0 1px 0 rgba(255,255,255,0.1); }
+    .hover\:bg-black-40:hover { background-color: rgba(0, 0, 0, 0.35); }
     .text-white-80 { color: rgba(255, 255, 255, 0.8); }
 </style>

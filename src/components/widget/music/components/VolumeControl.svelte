@@ -1,10 +1,18 @@
 <script lang="ts">
 import { fade } from "svelte/transition";
-import { setVolume, volume } from "../store";
+import { primaryColor, setVolume, volume } from "../store";
 
 let volumeBar: HTMLDivElement;
 let isDraggingVolume = false;
 let showVolume = false;
+
+export let isLightBackground = false;
+
+$: popupBg = `rgba(${$primaryColor[0]}, ${$primaryColor[1]}, ${$primaryColor[2]}, 0.55)`;
+$: popupShadow = isLightBackground
+	? '0 4px 6px rgba(0,0,0,0.04), 0 10px 20px rgba(0,0,0,0.08), 0 20px 40px rgba(0,0,0,0.12), inset 0 1px 0 rgba(255,255,255,0.25)'
+	: '0 4px 6px rgba(0,0,0,0.2), 0 10px 20px rgba(0,0,0,0.25), 0 20px 40px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.12)';
+$: hasVolume = $volume > 0;
 
 // 音量控制逻辑
 function updateVolume(e: MouseEvent | TouchEvent) {
@@ -64,10 +72,10 @@ function handleVolumeClick() {
             class="absolute bottom-full left-1/2 -translate-x-1/2 pb-4 flex flex-col items-center justify-end z-30 pointer-events-auto"
             transition:fade={{ duration: 150 }}
         >
-            <div class="h-28 w-8 bg-black/60 backdrop-blur-md rounded-full shadow-xl border border-white/10 flex flex-col items-center justify-end pb-3 pt-3">
+            <div class="h-28 w-8 rounded-full flex flex-col items-center justify-end pb-3 pt-3 overflow-hidden" style="background: {popupBg}; backdrop-filter: blur(40px); -webkit-backdrop-filter: blur(40px); box-shadow: {popupShadow};">
                 <div 
                     bind:this={volumeBar}
-                    class="volume-bar relative w-1.5 h-full bg-current/20 rounded-full cursor-pointer flex flex-col justify-end overflow-hidden group/slider"
+                    class="volume-bar relative w-1.5 h-full rounded-full cursor-pointer flex flex-col justify-end overflow-visible group/slider"
                     on:mousedown={handleVolumeStart}
                     on:touchstart={handleVolumeStart}
                     on:click|stopPropagation={(e) => updateVolume(e)}
@@ -86,10 +94,18 @@ function handleVolumeClick() {
                         }
                     }}
                 >
+                    <!-- Track background -->
+                    <div class="absolute inset-0 rounded-full" style="background: var(--player-progress-track);"></div>
                     <div 
-                        class="w-full bg-current rounded-full relative transition-all duration-75"
-                        style="height: {$volume * 100}%"
-                    ></div>
+                        class="w-full rounded-full relative transition-all duration-75"
+                        style="height: {$volume * 100}%; background: var(--player-progress-fill);"
+                    >
+                        <!-- Glow thumb at top of fill -->
+                        <div
+                            class="absolute left-1/2 -translate-x-1/2 -translate-y-1/2 w-2.5 h-2.5 rounded-full transition-opacity"
+                            style="top: 0; opacity: {isDraggingVolume ? 1 : hasVolume ? 0.65 : 0}; background: var(--player-progress-thumb); box-shadow: 0 0 6px 1px var(--player-progress-thumb);"
+                        ></div>
+                    </div>
                 </div>
             </div>
         </div>

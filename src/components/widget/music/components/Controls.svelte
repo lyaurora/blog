@@ -34,11 +34,11 @@ function handleModeSwitch() {
         <div class="relative flex items-center justify-center">
             {#if showModeTooltip}
                 <div 
-                    class="absolute -top-7 left-0 px-2 py-1 bg-white/90 text-black text-[10px] rounded shadow-lg font-medium tracking-wide z-20 pointer-events-none whitespace-nowrap"
+                    class="absolute -top-7 left-0 px-2 py-1 text-[10px] rounded font-medium tracking-wide z-20 pointer-events-none whitespace-nowrap" style="background: rgba(255,255,255,0.55); color: rgba(0,0,0,0.75); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); box-shadow: 0 2px 8px rgba(0,0,0,0.08), 0 4px 16px rgba(0,0,0,0.06), inset 0 1px 0 rgba(255,255,255,0.3);"
                     transition:fade={{ duration: 150 }}
                 >
                     {MODE_NAMES[$playMode]}
-                    <div class="absolute bottom-[-4px] left-[14px] -translate-x-1/2 w-0 h-0 border-l-[4px] border-l-transparent border-r-[4px] border-r-transparent border-t-[4px] border-t-white/90"></div>
+                    <div class="absolute bottom-[-4px] left-[14px] -translate-x-1/2 w-0 h-0 border-l-[4px] border-l-transparent border-r-[4px] border-r-transparent border-t-[4px]" style="border-top-color: rgba(255,255,255,0.55);"></div>
                 </div>
             {/if}
 

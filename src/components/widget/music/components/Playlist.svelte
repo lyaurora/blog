@@ -44,7 +44,7 @@ $: if ($showPlaylist) {
         class="absolute inset-x-0 bottom-0 top-16 z-10 flex flex-col transition-all duration-500"
         class:text-neutral-950={isLightBackground}
         class:text-white={!isLightBackground}
-        style="background: {isLightBackground ? 'rgba(255, 255, 255, 0.35)' : 'rgba(0, 0, 0, 0.25)'}; backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);"
+        style="background: {isLightBackground ? 'rgba(255, 255, 255, 0.4)' : 'rgba(0, 0, 0, 0.3)'}; backdrop-filter: blur(30px); -webkit-backdrop-filter: blur(30px);"
         transition:slide={{ duration: 200 }}
         role="listbox"
         aria-label="Playlist"
