@@ -8,10 +8,10 @@ let showVolume = false;
 
 export let isLightBackground = false;
 
-$: popupBg = `rgba(${$primaryColor[0]}, ${$primaryColor[1]}, ${$primaryColor[2]}, 0.55)`;
+$: popupBg = `rgba(${$primaryColor[0]}, ${$primaryColor[1]}, ${$primaryColor[2]}, 0.52)`;
 $: popupShadow = isLightBackground
-	? '0 4px 6px rgba(0,0,0,0.04), 0 10px 20px rgba(0,0,0,0.08), 0 20px 40px rgba(0,0,0,0.12), inset 0 1px 0 rgba(255,255,255,0.25)'
-	: '0 4px 6px rgba(0,0,0,0.2), 0 10px 20px rgba(0,0,0,0.25), 0 20px 40px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.12)';
+	? '0 4px 8px rgba(0,0,0,0.05), 0 12px 24px rgba(0,0,0,0.09), 0 22px 44px rgba(0,0,0,0.13), inset 0 1px 0 rgba(255,255,255,0.24)'
+	: '0 4px 8px rgba(0,0,0,0.22), 0 12px 24px rgba(0,0,0,0.26), 0 22px 44px rgba(0,0,0,0.38), inset 0 1px 0 rgba(255,255,255,0.12)';
 $: hasVolume = $volume > 0;
 
 // 音量控制逻辑
@@ -72,7 +72,7 @@ function handleVolumeClick() {
             class="absolute bottom-full left-1/2 -translate-x-1/2 pb-4 flex flex-col items-center justify-end z-30 pointer-events-auto"
             transition:fade={{ duration: 150 }}
         >
-            <div class="h-28 w-8 rounded-full flex flex-col items-center justify-end pb-3 pt-3 overflow-hidden" style="background: {popupBg}; backdrop-filter: blur(40px); -webkit-backdrop-filter: blur(40px); box-shadow: {popupShadow};">
+            <div class="h-28 w-8 rounded-full flex flex-col items-center justify-end pb-3 pt-3 overflow-hidden" style="background: {popupBg}; backdrop-filter: blur(36px); -webkit-backdrop-filter: blur(36px); box-shadow: {popupShadow};">
                 <div 
                     bind:this={volumeBar}
                     class="volume-bar relative w-1.5 h-full rounded-full cursor-pointer flex flex-col justify-end overflow-visible group/slider"
@@ -113,7 +113,7 @@ function handleVolumeClick() {
 
     <button 
         type="button"
-        class="text-current opacity-65 hover:opacity-100 transition p-1.5 relative"
+        class="text-current opacity-70 hover:opacity-100 transition p-1.5 relative"
         on:click={handleVolumeClick}
         aria-label={$volume > 0 ? "Mute" : "Unmute"}
     >

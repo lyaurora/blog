@@ -34,17 +34,17 @@ function handleModeSwitch() {
         <div class="relative flex items-center justify-center">
             {#if showModeTooltip}
                 <div 
-                    class="absolute -top-7 left-0 px-2 py-1 text-[10px] rounded font-medium tracking-wide z-20 pointer-events-none whitespace-nowrap" style="background: rgba(255,255,255,0.55); color: rgba(0,0,0,0.75); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); box-shadow: 0 2px 8px rgba(0,0,0,0.08), 0 4px 16px rgba(0,0,0,0.06), inset 0 1px 0 rgba(255,255,255,0.3);"
+                    class="absolute -top-7 left-0 px-2 py-1 text-[10px] rounded font-medium tracking-wide z-20 pointer-events-none whitespace-nowrap" style="background: rgba(255,255,255,0.5); color: rgba(0,0,0,0.75); backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px); box-shadow: 0 4px 8px rgba(0,0,0,0.05), 0 12px 24px rgba(0,0,0,0.09), inset 0 1px 0 rgba(255,255,255,0.24);"
                     transition:fade={{ duration: 150 }}
                 >
                     {MODE_NAMES[$playMode]}
-                    <div class="absolute bottom-[-4px] left-[14px] -translate-x-1/2 w-0 h-0 border-l-[4px] border-l-transparent border-r-[4px] border-r-transparent border-t-[4px]" style="border-top-color: rgba(255,255,255,0.55);"></div>
+                    <div class="absolute bottom-[-4px] left-[14px] -translate-x-1/2 w-0 h-0 border-l-[4px] border-l-transparent border-r-[4px] border-r-transparent border-t-[4px]" style="border-top-color: rgba(255,255,255,0.5);"></div>
                 </div>
             {/if}
 
             <button 
                 type="button"
-                class="text-current opacity-65 hover:opacity-100 transition p-1.5 relative group"
+                class="text-current opacity-70 hover:opacity-100 transition p-1.5 relative group"
                 on:click={handleModeSwitch}
                 on:mouseenter={() => { if(window.matchMedia('(hover: hover)').matches) showModeTooltip = true; }}
                 on:mouseleave={() => { if(window.matchMedia('(hover: hover)').matches) showModeTooltip = false; }}
@@ -69,7 +69,7 @@ function handleModeSwitch() {
         <!-- Like Button -->
         <button 
             type="button"
-            class="text-current opacity-65 hover:text-red-400 transition p-1.5 relative group"
+            class="text-current opacity-70 hover:text-red-400 transition p-1.5 relative group"
             class:text-red-500={$currentSong && $likedSongs.has($currentSong.id)}
             on:click={toggleLike}
             aria-label={$currentSong && $likedSongs.has($currentSong.id) ? "Unlike" : "Like"}
@@ -84,7 +84,7 @@ function handleModeSwitch() {
 
     <!-- Center Group: Prev, Play, Next -->
     <div class="flex items-center gap-1">
-        <button type="button" class="text-current opacity-80 hover:opacity-100 transition p-1" on:click={prevSong} aria-label="Previous song">
+        <button type="button" class="text-current opacity-75 hover:opacity-100 transition p-1" on:click={prevSong} aria-label="Previous song">
             <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" viewBox="0 0 24 24" fill="currentColor"><path d="M6 6h2v12H6zm3.5 6l8.5 6V6z"/></svg>
         </button>
         
@@ -107,7 +107,7 @@ function handleModeSwitch() {
             {/if}
         </button>
 
-        <button type="button" class="text-current opacity-80 hover:opacity-100 transition p-1" on:click={nextSong} aria-label="Next song">
+        <button type="button" class="text-current opacity-75 hover:opacity-100 transition p-1" on:click={nextSong} aria-label="Next song">
                 <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" viewBox="0 0 24 24" fill="currentColor"><path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z"/></svg>
         </button>
     </div>

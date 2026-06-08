@@ -12,6 +12,33 @@ let coverImg: HTMLImageElement;
 let colorThief: any; // Dynamic import type
 let colorCache: Record<string, [number, number, number]> = {};
 
+function normalizeThemeColor(color: [number, number, number]) {
+	let [r, g, b] = color;
+	const max = Math.max(r, g, b);
+	const min = Math.min(r, g, b);
+	const saturation = max === 0 ? 0 : (max - min) / max;
+	const luminance = (r * 299 + g * 587 + b * 114) / 1000;
+
+	if (luminance > 190) {
+		r *= 0.86;
+		g *= 0.86;
+		b *= 0.86;
+	} else if (luminance < 34) {
+		r = r * 0.78 + 28;
+		g = g * 0.78 + 28;
+		b = b * 0.78 + 28;
+	}
+
+	if (saturation > 0.72) {
+		const gray = (r + g + b) / 3;
+		r = r * 0.82 + gray * 0.18;
+		g = g * 0.82 + gray * 0.18;
+		b = b * 0.82 + gray * 0.18;
+	}
+
+	return [Math.round(r), Math.round(g), Math.round(b)] as [number, number, number];
+}
+
 $: isLightBackground =
 	($primaryColor[0] * 299 + $primaryColor[1] * 587 + $primaryColor[2] * 114) /
 		1000 >
@@ -44,7 +71,7 @@ async function extractColor() {
 	const song = $currentSong;
 	const getColor = () => {
 		try {
-			const color = colorThief.getColor(coverImg);
+			const color = normalizeThemeColor(colorThief.getColor(coverImg));
 			$primaryColor = color;
 			colorCache[song.pic] = color;
 		} catch (e) {

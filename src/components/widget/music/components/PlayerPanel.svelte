@@ -37,8 +37,8 @@ $: artistForegroundClass = isLightBackground
 	? "text-neutral-800/75"
 	: "text-white/80";
 $: panelShadow = isLightBackground
-	? "0 4px 6px rgba(0, 0, 0, 0.04), 0 15px 25px rgba(0, 0, 0, 0.08), 0 30px 60px rgba(0, 0, 0, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.2)"
-	: "0 4px 6px rgba(0, 0, 0, 0.2), 0 15px 25px rgba(0, 0, 0, 0.3), 0 30px 60px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.1)";
+	? "0 4px 8px rgba(0, 0, 0, 0.05), 0 16px 32px rgba(0, 0, 0, 0.1), 0 28px 56px rgba(0, 0, 0, 0.14), inset 0 1px 0 rgba(255, 255, 255, 0.24)"
+	: "0 4px 8px rgba(0, 0, 0, 0.22), 0 16px 32px rgba(0, 0, 0, 0.28), 0 28px 56px rgba(0, 0, 0, 0.42), inset 0 1px 0 rgba(255, 255, 255, 0.12)";
 </script>
 
 <div 
@@ -51,7 +51,7 @@ $: panelShadow = isLightBackground
     class:translate-y-4={!$isExpanded}
     class:scale-95={!$isExpanded}
     class:pointer-events-none={!$isExpanded}
-    style="background: rgba({$primaryColor[0]}, {$primaryColor[1]}, {$primaryColor[2]}, 0.65); backdrop-filter: blur(40px); box-shadow: {panelShadow}; --player-play-bg: {isLightBackground ? 'rgba(255, 255, 255, 0.45)' : 'rgba(255, 255, 255, 0.15)'}; --player-play-icon: {isLightBackground ? 'rgba(0, 0, 0, 0.7)' : 'rgba(255, 255, 255, 0.9)'}; --player-progress-track: {isLightBackground ? 'rgba(38, 38, 38, 0.16)' : 'rgba(255, 255, 255, 0.22)'}; --player-progress-fill: {isLightBackground ? 'rgba(38, 38, 38, 0.48)' : 'rgba(255, 255, 255, 0.78)'}; --player-progress-fill-hover: {isLightBackground ? 'rgba(38, 38, 38, 0.6)' : 'rgba(255, 255, 255, 0.9)'}; --player-progress-thumb: {isLightBackground ? 'rgba(38, 38, 38, 0.62)' : 'rgba(255, 255, 255, 0.9)'};"
+    style="background: rgba({$primaryColor[0]}, {$primaryColor[1]}, {$primaryColor[2]}, 0.62); backdrop-filter: blur(36px); -webkit-backdrop-filter: blur(36px); box-shadow: {panelShadow}; --player-play-bg: {isLightBackground ? 'rgba(255, 255, 255, 0.42)' : 'rgba(255, 255, 255, 0.16)'}; --player-play-icon: {isLightBackground ? 'rgba(0, 0, 0, 0.72)' : 'rgba(255, 255, 255, 0.9)'}; --player-progress-track: {isLightBackground ? 'rgba(38, 38, 38, 0.16)' : 'rgba(255, 255, 255, 0.22)'}; --player-progress-fill: {isLightBackground ? 'rgba(38, 38, 38, 0.48)' : 'rgba(255, 255, 255, 0.78)'}; --player-progress-fill-hover: {isLightBackground ? 'rgba(38, 38, 38, 0.6)' : 'rgba(255, 255, 255, 0.9)'}; --player-progress-thumb: {isLightBackground ? 'rgba(38, 38, 38, 0.62)' : 'rgba(255, 255, 255, 0.9)'};"
     role="dialog"
     aria-label="Music Player"
     tabindex="-1"
@@ -86,7 +86,7 @@ $: panelShadow = isLightBackground
                 <VolumeControl {isLightBackground} />
 
                 <!-- 播放列表切换 -->
-                <button type="button" class="text-current opacity-65 hover:opacity-100 transition p-1.5" on:click={togglePlaylist} class:opacity-100={$showPlaylist} aria-label="Toggle playlist">
+                <button type="button" class="text-current opacity-70 hover:opacity-100 transition p-1.5" on:click={togglePlaylist} class:opacity-100={$showPlaylist} aria-label="Toggle playlist">
                     <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>
                 </button>
             </div>
