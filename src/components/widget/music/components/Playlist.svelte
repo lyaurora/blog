@@ -24,6 +24,12 @@ function handleLike(e: MouseEvent | KeyboardEvent, song: Song) {
 	toggleLike(song);
 }
 
+function handleSongKeydown(e: KeyboardEvent, index: number) {
+	if (e.key !== "Enter" && e.key !== " ") return;
+	e.preventDefault();
+	handlePlaySong(index);
+}
+
 // Ensure reactivity for the set usage in loop
 $: likedIds = $likedSongs;
 
@@ -69,15 +75,16 @@ $: if ($showPlaylist) {
             {:else}
                 {#each $playlist as song, i (song.id)}
                     <div animate:flip={{ duration: 300 }}>
-                        <!-- Changed outer button to div to fix HTML nesting error -->
-                        <!-- svelte-ignore a11y-click-events-have-key-events -->
-                        <!-- svelte-ignore a11y-no-static-element-interactions -->
                         <div 
-                            class="w-full flex items-center gap-3 p-2 rounded-md transition-all text-left group relative overflow-hidden cursor-pointer"
+                            class="w-full flex items-center gap-3 p-2 rounded-md transition-all text-left group relative overflow-hidden cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-current/45"
                             class:bg-current-10={$currentIndex === i}
                             class:playlist-active-item={$currentIndex === i}
                             class:hover:bg-current-5={$currentIndex !== i}
+                            role="option"
+                            aria-selected={$currentIndex === i}
+                            tabindex="0"
                             on:click={() => handlePlaySong(i)}
+                            on:keydown={(e) => handleSongKeydown(e, i)}
                         >
                             {#if $currentIndex === i}
                                 <div class="absolute left-0 top-1/2 -translate-y-1/2 h-4 w-1 bg-current rounded-r my-auto"></div>

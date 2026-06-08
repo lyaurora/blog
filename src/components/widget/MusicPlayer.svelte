@@ -30,6 +30,7 @@ const musicConfig = (siteConfig.music as MusicConfig) || DEFAULT_MUSIC_CONFIG;
 
 let audio: HTMLAudioElement;
 let playerStyle = "left: 1rem;"; // 默认左下角
+let schedulePositionUpdate = () => calculatePosition();
 
 // 定位逻辑 (优化版: 移除 RAF 轮询，仅在 Resize 时计算)
 function calculatePosition() {
@@ -132,30 +133,30 @@ onMount(() => {
 	hydrated = true;
 	initLikeStore();
 
-	// 优化：仅使用 ResizeObserver，移除 RAF
-	// 使用 debounce 避免高频 Resize 导致过多计算
 	const debouncedCalculate = debounce(calculatePosition, 100);
+	schedulePositionUpdate = debouncedCalculate;
+	const resizeTarget = document.getElementById("main-grid") || document.body;
 	const observer = new ResizeObserver(() => {
 		debouncedCalculate();
 	});
-	observer.observe(document.body);
+	observer.observe(resizeTarget);
 
-	// 初始计算一次
 	calculatePosition();
-	// 再次延迟计算以防 DOM 未完全就绪
-	setTimeout(calculatePosition, 500);
+	const recalculateTimer = window.setTimeout(calculatePosition, 500);
 
 	(async () => {
 		await fetchPlaylist(musicConfig);
 	})();
 
-	// 延迟显示以避免动画突兀
-	setTimeout(() => {
+	const mountTimer = window.setTimeout(() => {
 		mounted = true;
 	}, 500);
 
 	return () => {
 		observer.disconnect();
+		window.clearTimeout(recalculateTimer);
+		window.clearTimeout(mountTimer);
+		schedulePositionUpdate = () => calculatePosition();
 	};
 });
 
@@ -177,7 +178,7 @@ $: if ($currentSong) {
 	{/each}
 </svelte:head>
 
-<svelte:window on:click={handleClickOutside} on:resize={() => calculatePosition()} />
+<svelte:window on:click={handleClickOutside} on:resize={schedulePositionUpdate} />
 
 {#if musicConfig.enable && hydrated}
     <!-- 容器：固定定位 -->
@@ -264,5 +265,20 @@ $: if ($currentSong) {
     @keyframes spin {
         from { transform: rotate(0deg); }
         to { transform: rotate(360deg); }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        .animate-spin-slow {
+            animation: none;
+        }
+
+        :global(.music-player-container *),
+        :global(.music-player-container *::before),
+        :global(.music-player-container *::after) {
+            animation-duration: 1ms !important;
+            animation-iteration-count: 1 !important;
+            transition-duration: 1ms !important;
+            scroll-behavior: auto !important;
+        }
     }
 </style>

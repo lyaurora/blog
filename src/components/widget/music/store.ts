@@ -50,7 +50,9 @@ let isSwitchingPlaylist = false;
 const preloadedCovers = new Set<string>();
 const preloadedAudio = new Map<string, HTMLAudioElement>();
 const PLAYLIST_CACHE_MAX_AGE = 7 * 24 * 60 * 60 * 1000;
+const PLAYLIST_BACKGROUND_REFRESH_AGE = 12 * 60 * 60 * 1000;
 const MAX_AUDIO_ERROR_SKIPS = 3;
+const SLOW_CONNECTION_TYPES = new Set(["slow-2g", "2g"]);
 
 // Audio Element Reference
 let audio: HTMLAudioElement | null = null;
@@ -346,7 +348,14 @@ function preloadNearbyCovers(list: Song[], index: number) {
 }
 
 function preloadAudio(url?: string) {
-	if (!url || typeof Audio === "undefined" || preloadedAudio.has(url)) return;
+	if (
+		!url ||
+		typeof Audio === "undefined" ||
+		preloadedAudio.has(url) ||
+		!shouldPreloadAudio()
+	) {
+		return;
+	}
 
 	const nextAudio = new Audio();
 	nextAudio.crossOrigin = "anonymous";
@@ -364,6 +373,20 @@ function preloadAudio(url?: string) {
 		oldAudio.load();
 		preloadedAudio.delete(oldUrl);
 	}
+}
+
+function shouldPreloadAudio() {
+	if (typeof navigator === "undefined") return true;
+
+	const connection = (
+		navigator as Navigator & {
+			connection?: { saveData?: boolean; effectiveType?: string };
+		}
+	).connection;
+
+	if (!connection) return true;
+	if (connection.saveData) return false;
+	return !SLOW_CONNECTION_TYPES.has(connection.effectiveType || "");
 }
 
 function preloadNearbyAudio(list: Song[], index: number) {
@@ -519,6 +542,7 @@ export async function fetchPlaylist(config: MusicConfig) {
 	// Try to load from cache first
 	const cacheKey = `music-playlist-${config.id}`;
 	let hasUsableCache = false;
+	let shouldRefreshCache = true;
 	if (typeof localStorage !== "undefined") {
 		const cached = localStorage.getItem(cacheKey);
 		if (cached) {
@@ -535,6 +559,7 @@ export async function fetchPlaylist(config: MusicConfig) {
 					setPlaylistWithSafeIndex(sortedCache);
 					preloadNearbyAssets(sortedCache, get(currentIndex));
 					hasUsableCache = true;
+					shouldRefreshCache = cacheAge > PLAYLIST_BACKGROUND_REFRESH_AGE;
 					errorMsg.set(null);
 				}
 			} catch (e) {
@@ -543,11 +568,16 @@ export async function fetchPlaylist(config: MusicConfig) {
 		}
 	}
 
+	if (hasUsableCache && !shouldRefreshCache) return;
+
 	try {
 		const api = config.api || DEFAULT_API_URL;
-		const res = await fetch(
-			`${api}?server=${config.server}&type=${config.type}&id=${config.id}&r=${Math.random()}`,
-		);
+		const query = new URLSearchParams({
+			server: config.server,
+			type: config.type || "playlist",
+			id: config.id,
+		});
+		const res = await fetch(`${api}?${query.toString()}`);
 		if (!res.ok) {
 			throw new Error(`API Error: ${res.status} ${res.statusText}`);
 		}
