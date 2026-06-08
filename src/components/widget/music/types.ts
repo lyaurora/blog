@@ -1,3 +1,5 @@
+export type { MusicConfig } from "@/types/config";
+
 export interface Song {
 	id: string;
 	title: string;
@@ -5,14 +7,6 @@ export interface Song {
 	url: string;
 	pic: string;
 	lrc?: string;
-}
-
-export interface MusicConfig {
-	enable: boolean;
-	id: string;
-	server: string;
-	type: string;
-	api?: string;
 }
 
 export interface MetingItem {

@@ -26,7 +26,10 @@ import {
 import type { MusicConfig } from "./music/types";
 
 // 配置
-const musicConfig = (siteConfig.music as MusicConfig) || DEFAULT_MUSIC_CONFIG;
+const musicConfig: MusicConfig = {
+	...DEFAULT_MUSIC_CONFIG,
+	...siteConfig.music,
+};
 
 let audio: HTMLAudioElement;
 let playerStyle = "left: 1rem;"; // 默认左下角

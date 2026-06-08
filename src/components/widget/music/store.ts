@@ -573,7 +573,7 @@ export async function fetchPlaylist(config: MusicConfig) {
 	try {
 		const api = config.api || DEFAULT_API_URL;
 		const query = new URLSearchParams({
-			server: config.server,
+			server: config.server || "netease",
 			type: config.type || "playlist",
 			id: config.id,
 		});
