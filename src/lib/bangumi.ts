@@ -101,7 +101,9 @@ function normalizeBangumiItem(item: BangumiItem): BangumiItem {
 	};
 }
 
-function createBangumiSnapshotRevision(collections: BangumiCollection[]): string {
+function createBangumiSnapshotRevision(
+	collections: BangumiCollection[],
+): string {
 	return collections
 		.map((collection) => {
 			const itemRevision = collection.list
@@ -110,7 +112,11 @@ function createBangumiSnapshotRevision(collections: BangumiCollection[]): string
 					return [
 						subject.id,
 						subject.name_cn || subject.name,
-						subject.images?.large || subject.images?.common || subject.images?.medium || subject.images?.grid || "",
+						subject.images?.large ||
+							subject.images?.common ||
+							subject.images?.medium ||
+							subject.images?.grid ||
+							"",
 						subject.eps,
 						subject.score,
 						item.ep_status,

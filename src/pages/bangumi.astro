@@ -2,8 +2,8 @@
 // src/pages/bangumi.astro
 export const prerender = true;
 
-import { bangumiCollections } from "../lib/bangumi";
 import Layout from "../layouts/MainGridLayout.astro";
+import { bangumiCollections } from "../lib/bangumi";
 
 const skeletonSections = bangumiCollections.slice(0, 2);
 ---

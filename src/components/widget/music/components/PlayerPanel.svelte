@@ -29,9 +29,7 @@ $: mutedForegroundClass = isLightBackground
 $: subtleForegroundClass = isLightBackground
 	? "text-neutral-800/60"
 	: "text-white/55";
-$: titleForegroundClass = isLightBackground
-	? "text-neutral-900"
-	: "text-white";
+$: titleForegroundClass = isLightBackground ? "text-neutral-900" : "text-white";
 $: titleWeightClass = "font-semibold";
 $: artistForegroundClass = isLightBackground
 	? "text-neutral-800/75"

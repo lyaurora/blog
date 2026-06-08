@@ -18,7 +18,6 @@ interface ImportMetaEnv {
 	readonly BASE_URL: string;
 }
 
-// biome-ignore lint/correctness/noUnusedVariables: Global type augmentation for import.meta
 interface ImportMeta {
 	readonly env: ImportMetaEnv;
 }

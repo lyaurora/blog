@@ -17,8 +17,7 @@ const freshCacheHeaders = {
 const fallbackCacheHeaders = {
 	"Content-Type": "application/json; charset=utf-8",
 	"Cache-Control": "public, max-age=0",
-	"Vercel-CDN-Cache-Control":
-		"public, s-maxage=60, stale-while-revalidate=600",
+	"Vercel-CDN-Cache-Control": "public, s-maxage=60, stale-while-revalidate=600",
 };
 
 const noStoreHeaders = {

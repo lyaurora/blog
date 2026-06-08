@@ -9,7 +9,9 @@ import {
 } from "../store";
 
 let coverImg: HTMLImageElement;
-let colorThief: any; // Dynamic import type
+let colorThief: {
+	getColor: (image: HTMLImageElement) => [number, number, number];
+};
 let colorCache: Record<string, [number, number, number]> = {};
 
 function normalizeThemeColor(color: [number, number, number]) {
@@ -36,7 +38,11 @@ function normalizeThemeColor(color: [number, number, number]) {
 		b = b * 0.82 + gray * 0.18;
 	}
 
-	return [Math.round(r), Math.round(g), Math.round(b)] as [number, number, number];
+	return [Math.round(r), Math.round(g), Math.round(b)] as [
+		number,
+		number,
+		number,
+	];
 }
 
 $: isLightBackground =
@@ -45,7 +51,7 @@ $: isLightBackground =
 	160;
 
 async function extractColor() {
-	if (!$currentSong || !$currentSong.pic) return;
+	if (!$currentSong?.pic) return;
 
 	// 优先检查缓存
 	if ($currentSong && colorCache[$currentSong.pic]) {

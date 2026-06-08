@@ -17,7 +17,8 @@ interface BangumiSnapshotResult {
 
 function isMemorySnapshotFresh(): boolean {
 	return Boolean(
-		memorySnapshot && Date.now() - memorySnapshotUpdatedAt < MEMORY_CACHE_TTL_MS,
+		memorySnapshot &&
+			Date.now() - memorySnapshotUpdatedAt < MEMORY_CACHE_TTL_MS,
 	);
 }
 

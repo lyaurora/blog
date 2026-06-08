@@ -33,7 +33,9 @@ export const audioPreconnectOrigins = derived(
 		const origins = new Set<string>();
 		for (const offset of [0, 1, -1]) {
 			const song =
-				$playlist[($currentIndex + offset + $playlist.length) % $playlist.length];
+				$playlist[
+					($currentIndex + offset + $playlist.length) % $playlist.length
+				];
 			if (!song?.url) continue;
 			try {
 				origins.add(new URL(song.url).origin);
@@ -68,7 +70,7 @@ let lastCurrentSongUrl = "";
 currentIndex.subscribe(($index) => {
 	if (isSwitchingPlaylist) return;
 	const $playlist = get(playlist);
-	if ($playlist && $playlist[$index]) {
+	if ($playlist?.[$index]) {
 		currentSong.set($playlist[$index]);
 		// Persist current index
 		if (typeof localStorage !== "undefined") {
@@ -79,7 +81,7 @@ currentIndex.subscribe(($index) => {
 playlist.subscribe(($playlist) => {
 	if (isSwitchingPlaylist) return;
 	const $index = get(currentIndex);
-	if ($playlist && $playlist[$index]) {
+	if ($playlist?.[$index]) {
 		currentSong.set($playlist[$index]);
 	}
 });
@@ -94,13 +96,15 @@ currentSong.subscribe(($song) => {
 		lastCurrentSongUrl = nextUrl;
 	}
 
-	if (typeof navigator !== "undefined" && "mediaSession" in navigator && $song) {
+	if (
+		typeof navigator !== "undefined" &&
+		"mediaSession" in navigator &&
+		$song
+	) {
 		navigator.mediaSession.metadata = new MediaMetadata({
 			title: $song.title,
 			artist: $song.author,
-			artwork: [
-				{ src: $song.pic, sizes: "500x500", type: "image/jpeg" },
-			],
+			artwork: [{ src: $song.pic, sizes: "500x500", type: "image/jpeg" }],
 		});
 	}
 });
@@ -141,7 +145,7 @@ function setPlaylistWithSafeIndex(list: Song[]) {
 // Actions
 export function setAudioElement(el: HTMLAudioElement) {
 	audio = el;
-	
+
 	// Setup MediaSession hardware/OS controls
 	if (typeof navigator !== "undefined" && "mediaSession" in navigator) {
 		navigator.mediaSession.setActionHandler("play", playAudio);
@@ -189,7 +193,10 @@ export function handleAudioError() {
 	lastAudioErrorAt = now;
 
 	const $playlist = get(playlist);
-	if ($playlist.length <= 1 || consecutiveAudioErrors >= MAX_AUDIO_ERROR_SKIPS) {
+	if (
+		$playlist.length <= 1 ||
+		consecutiveAudioErrors >= MAX_AUDIO_ERROR_SKIPS
+	) {
 		isPlaying.set(false);
 		errorMsg.set("当前歌曲加载失败，请稍后再试");
 		return;
@@ -275,61 +282,61 @@ function playAudio() {
 	audio.volume = 0;
 	isAudioLoading.set(true);
 	preloadNearbyAudio(get(playlist), get(currentIndex));
-	audio.play().then(() => {
-		if (!audio) return;
+	audio
+		.play()
+		.then(() => {
+			if (!audio) return;
 
-		if (requestToken !== playbackRequestToken) {
+			if (requestToken !== playbackRequestToken) {
+				if (playbackIntent !== "play") {
+					audio.pause();
+					audio.volume = targetVolume;
+				}
+				return;
+			}
+
 			if (playbackIntent !== "play") {
 				audio.pause();
 				audio.volume = targetVolume;
+				return;
 			}
-			return;
-		}
 
-		if (playbackIntent !== "play") {
-			audio.pause();
-			audio.volume = targetVolume;
-			return;
-		}
+			fadeInterval = window.setInterval(() => {
+				if (
+					!audio ||
+					requestToken !== playbackRequestToken ||
+					playbackIntent !== "play"
+				) {
+					clearFadeInterval();
+					return;
+				}
 
-		fadeInterval = window.setInterval(() => {
-			if (
-				!audio ||
-				requestToken !== playbackRequestToken ||
-				playbackIntent !== "play"
-			) {
+				currentStep++;
+				const newVol = targetVolume * (currentStep / steps);
+
+				if (currentStep < steps && newVol < targetVolume) {
+					audio.volume = newVol;
+					return;
+				}
+
+				audio.volume = targetVolume;
 				clearFadeInterval();
-				return;
-			}
-
-			currentStep++;
-			const newVol = targetVolume * (currentStep / steps);
-
-			if (currentStep < steps && newVol < targetVolume) {
-				audio.volume = newVol;
-				return;
-			}
-
-			audio.volume = targetVolume;
+			}, stepTime);
+		})
+		.catch((e) => {
+			if (audio) audio.volume = targetVolume;
+			isAudioLoading.set(false);
 			clearFadeInterval();
-		}, stepTime);
-	}).catch((e) => {
-		if (audio) audio.volume = targetVolume;
-		isAudioLoading.set(false);
-		clearFadeInterval();
 
-		if (
-			requestToken !== playbackRequestToken ||
-			playbackIntent !== "play"
-		) {
-			return;
-		}
+			if (requestToken !== playbackRequestToken || playbackIntent !== "play") {
+				return;
+			}
 
-		console.error("Playback failed", e);
-		if (!(e instanceof DOMException) || e.name !== "NotAllowedError") {
-			handleAudioError();
-		}
-	});
+			console.error("Playback failed", e);
+			if (!(e instanceof DOMException) || e.name !== "NotAllowedError") {
+				handleAudioError();
+			}
+		});
 }
 
 function preloadCover(pic?: string) {
