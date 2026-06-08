@@ -1,8 +1,8 @@
 import type { APIRoute } from "astro";
 import {
+	getBangumiSnapshot,
 	getCachedBangumiSnapshot,
 	hasCachedBangumiSnapshot,
-	refreshBangumiSnapshot,
 } from "../../lib/bangumi-cache";
 
 export const prerender = false;
@@ -29,12 +29,13 @@ const noStoreHeaders = {
 
 export const GET: APIRoute = async () => {
 	try {
-		const snapshot = await refreshBangumiSnapshot();
+		const { snapshot, source } = await getBangumiSnapshot();
 
 		return new Response(
 			JSON.stringify({
 				ok: true,
-				source: "fresh",
+				source,
+				stale: false,
 				snapshot,
 			}),
 			{ headers: freshCacheHeaders },
@@ -47,6 +48,7 @@ export const GET: APIRoute = async () => {
 				JSON.stringify({
 					ok: true,
 					source: "memory-fallback",
+					stale: true,
 					snapshot: getCachedBangumiSnapshot(),
 				}),
 				{ headers: fallbackCacheHeaders },
@@ -57,6 +59,7 @@ export const GET: APIRoute = async () => {
 			JSON.stringify({
 				ok: false,
 				source: "empty",
+				stale: true,
 				snapshot: getCachedBangumiSnapshot(),
 			}),
 			{ status: 503, headers: noStoreHeaders },

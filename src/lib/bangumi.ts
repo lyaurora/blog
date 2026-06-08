@@ -43,6 +43,7 @@ interface BangumiCollectionRequest {
 
 export interface BangumiSnapshot {
 	updatedAt: string;
+	revision: string;
 	collections: BangumiCollection[];
 }
 
@@ -52,7 +53,7 @@ export const bangumiCollections: BangumiCollectionRequest[] = [
 	{ label: "已看完", type: 2, limit: 100 },
 ];
 
-export function formatBangumiUpdatedAt(date = new Date()) {
+export function formatBangumiUpdatedAt(date: Date = new Date()): string {
 	return date
 		.toLocaleString("zh-CN", {
 			year: "numeric",
@@ -70,11 +71,57 @@ export function formatBangumiUpdatedAt(date = new Date()) {
 export function createEmptyBangumiSnapshot(): BangumiSnapshot {
 	return {
 		updatedAt: "",
+		revision: "empty",
 		collections: bangumiCollections.map((collection) => ({
 			...collection,
 			list: [],
 		})),
 	};
+}
+
+function normalizeBangumiItem(item: BangumiItem): BangumiItem {
+	const subject = item.subject;
+
+	return {
+		ep_status: item.ep_status,
+		rate: item.rate,
+		subject: {
+			id: subject.id,
+			name: subject.name,
+			name_cn: subject.name_cn,
+			eps: subject.eps,
+			score: subject.score,
+			images: {
+				large: subject.images?.large,
+				common: subject.images?.common,
+				medium: subject.images?.medium,
+				grid: subject.images?.grid,
+			},
+		},
+	};
+}
+
+function createBangumiSnapshotRevision(collections: BangumiCollection[]): string {
+	return collections
+		.map((collection) => {
+			const itemRevision = collection.list
+				.map((item) => {
+					const subject = item.subject;
+					return [
+						subject.id,
+						subject.name_cn || subject.name,
+						subject.images?.large || subject.images?.common || subject.images?.medium || subject.images?.grid || "",
+						subject.eps,
+						subject.score,
+						item.ep_status,
+						item.rate,
+					].join(":");
+				})
+				.join("|");
+
+			return `${collection.type}:${collection.label}:${itemRevision}`;
+		})
+		.join("||");
 }
 
 async function fetchBangumiCollection(
@@ -125,7 +172,7 @@ export async function fetchBangumiSnapshot(): Promise<BangumiSnapshot> {
 				username,
 				collection.type,
 				collection.limit,
-			);
+			).then((items) => items.map(normalizeBangumiItem));
 			return { ...collection, list };
 		}),
 	);
@@ -133,6 +180,7 @@ export async function fetchBangumiSnapshot(): Promise<BangumiSnapshot> {
 
 	return {
 		updatedAt: formatBangumiUpdatedAt(now),
+		revision: createBangumiSnapshotRevision(collections),
 		collections,
 	};
 }

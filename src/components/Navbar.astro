@@ -104,6 +104,9 @@ function loadButtonScript() {
 
 const bangumiSnapshotCacheKey = "bangumi:snapshot:v1";
 const bangumiSnapshotApiUrl = "/bangumi/bangumi.json";
+const bangumiSnapshotCacheVersion = 2;
+const bangumiSnapshotLocalCacheFreshMs = 6 * 60 * 60 * 1000;
+const bangumiSnapshotLocalCacheMaxAgeMs = 7 * 24 * 60 * 60 * 1000;
 const bangumiSnapshotPromiseMaxAge = 30 * 1000;
 
 function isBangumiSnapshot(value: unknown): value is BangumiSnapshot {
@@ -119,12 +122,40 @@ function hasBangumiSnapshotItems(snapshot: unknown) {
         && snapshot.collections.some((group) => Array.isArray(group.list) && group.list.length > 0);
 }
 
+function isBangumiSnapshotCacheEnvelope(value: unknown): value is BangumiSnapshotCacheEnvelope {
+    return Boolean(
+        typeof value === "object"
+        && value !== null
+        && (value as { version?: unknown }).version === bangumiSnapshotCacheVersion
+        && typeof (value as { cachedAt?: unknown }).cachedAt === "number"
+        && isBangumiSnapshot((value as { snapshot?: unknown }).snapshot)
+    );
+}
+
 function readBangumiSnapshotCache() {
     try {
         const raw = localStorage.getItem(bangumiSnapshotCacheKey);
         if (!raw) return undefined;
-        const snapshot = JSON.parse(raw);
-        return isBangumiSnapshot(snapshot) ? snapshot : undefined;
+        const cachedValue = JSON.parse(raw);
+
+        if (isBangumiSnapshotCacheEnvelope(cachedValue)) {
+            const age = Date.now() - cachedValue.cachedAt;
+            if (age > bangumiSnapshotLocalCacheMaxAgeMs) return undefined;
+
+            return {
+                snapshot: cachedValue.snapshot,
+                isStale: age > bangumiSnapshotLocalCacheFreshMs,
+            };
+        }
+
+        if (isBangumiSnapshot(cachedValue)) {
+            return {
+                snapshot: cachedValue,
+                isStale: true,
+            };
+        }
+
+        return undefined;
     } catch {
         return undefined;
     }
@@ -132,7 +163,11 @@ function readBangumiSnapshotCache() {
 
 function writeBangumiSnapshotCache(snapshot: BangumiSnapshot) {
     try {
-        localStorage.setItem(bangumiSnapshotCacheKey, JSON.stringify(snapshot));
+        localStorage.setItem(bangumiSnapshotCacheKey, JSON.stringify({
+            version: bangumiSnapshotCacheVersion,
+            cachedAt: Date.now(),
+            snapshot,
+        }));
     } catch {
         // Ignore storage quota/private browsing failures.
     }
@@ -220,7 +255,8 @@ function scheduleBangumiSnapshotWarmup() {
     if (window.location.pathname === "/bangumi/") return;
 
     const warmupIfMissing = () => {
-        if (hasBangumiSnapshotItems(readBangumiSnapshotCache())) return;
+        const cachedEntry = readBangumiSnapshotCache();
+        if (cachedEntry && hasBangumiSnapshotItems(cachedEntry.snapshot) && !cachedEntry.isStale) return;
 
         const runWarmup = () => {
             warmBangumiSnapshot().catch(() => undefined);

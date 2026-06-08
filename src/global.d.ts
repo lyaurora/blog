@@ -14,6 +14,7 @@ interface Pagefind {
 declare global {
 	interface BangumiSnapshot {
 		updatedAt?: string;
+		revision?: string;
 		collections: Array<{
 			type?: number;
 			label?: string;
@@ -21,9 +22,16 @@ declare global {
 		}>;
 	}
 
+	interface BangumiSnapshotCacheEnvelope {
+		version: number;
+		cachedAt: number;
+		snapshot: BangumiSnapshot;
+	}
+
 	interface BangumiSnapshotPayload {
 		ok?: boolean;
 		source?: string;
+		stale?: boolean;
 		snapshot?: BangumiSnapshot;
 	}
 

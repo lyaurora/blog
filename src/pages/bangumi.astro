@@ -63,6 +63,9 @@ const skeletonSections = bangumiCollections.slice(0, 2);
 	<script is:inline>
 	(() => {
 		const cacheKey = "bangumi:snapshot:v1";
+		const cacheVersion = 2;
+		const localCacheFreshMs = 6 * 60 * 60 * 1000;
+		const localCacheMaxAgeMs = 7 * 24 * 60 * 60 * 1000;
 		const apiUrl = "/bangumi/bangumi.json";
 		const listElement = document.getElementById("bangumi-list");
 		const emptyElement = document.getElementById("bangumi-empty");
@@ -87,6 +90,10 @@ const skeletonSections = bangumiCollections.slice(0, 2);
 			return Boolean(value && Array.isArray(value.collections));
 		}
 
+		function isCacheEnvelope(value) {
+			return Boolean(value && value.version === cacheVersion && typeof value.cachedAt === "number" && isSnapshot(value.snapshot));
+		}
+
 		function hasItems(snapshot) {
 			return snapshot.collections.some((group) => Array.isArray(group.list) && group.list.length > 0);
 		}
@@ -101,6 +108,7 @@ const skeletonSections = bangumiCollections.slice(0, 2);
 
 		function getSnapshotSignature(snapshot) {
 			if (!isSnapshot(snapshot)) return "";
+			if (snapshot.revision) return String(snapshot.revision);
 
 			const normalizedCollections = snapshot.collections.map((group) => {
 				const list = Array.isArray(group.list) ? group.list : [];
@@ -236,8 +244,26 @@ const skeletonSections = bangumiCollections.slice(0, 2);
 			try {
 				const raw = localStorage.getItem(cacheKey);
 				if (!raw) return undefined;
-				const snapshot = JSON.parse(raw);
-				return isSnapshot(snapshot) ? snapshot : undefined;
+				const cachedValue = JSON.parse(raw);
+
+				if (isCacheEnvelope(cachedValue)) {
+					const age = Date.now() - cachedValue.cachedAt;
+					if (age > localCacheMaxAgeMs) return undefined;
+
+					return {
+						snapshot: cachedValue.snapshot,
+						isStale: age > localCacheFreshMs,
+					};
+				}
+
+				if (isSnapshot(cachedValue)) {
+					return {
+						snapshot: cachedValue,
+						isStale: true,
+					};
+				}
+
+				return undefined;
 			} catch {
 				return undefined;
 			}
@@ -245,7 +271,11 @@ const skeletonSections = bangumiCollections.slice(0, 2);
 
 		function writeCachedSnapshot(snapshot) {
 			try {
-				localStorage.setItem(cacheKey, JSON.stringify(snapshot));
+				localStorage.setItem(cacheKey, JSON.stringify({
+					version: cacheVersion,
+					cachedAt: Date.now(),
+					snapshot,
+				}));
 			} catch {
 				// Ignore storage quota/private browsing failures.
 			}
@@ -272,8 +302,10 @@ const skeletonSections = bangumiCollections.slice(0, 2);
 				return response.json();
 			});
 
+			window.__bangumiSnapshotPromiseStartedAt = Date.now();
 			window.__bangumiSnapshotPromise = request.catch((error) => {
 				window.__bangumiSnapshotPromise = undefined;
+				window.__bangumiSnapshotPromiseStartedAt = 0;
 				throw error;
 			});
 
@@ -281,7 +313,8 @@ const skeletonSections = bangumiCollections.slice(0, 2);
 		}
 
 		async function syncBangumi() {
-			const cachedSnapshot = readCachedSnapshot();
+			const cachedEntry = readCachedSnapshot();
+			const cachedSnapshot = cachedEntry?.snapshot;
 			if (cachedSnapshot && hasItems(cachedSnapshot)) {
 				renderSnapshot(cachedSnapshot);
 			}
