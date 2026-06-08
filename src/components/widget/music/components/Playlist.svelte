@@ -115,6 +115,7 @@ $: if ($showPlaylist) {
                                 type="button"
                                 class="w-6 h-6 flex items-center justify-center hover:text-red-500 hover:scale-110 transition shrink-0 z-10 {likedIds.has(song.id) ? 'text-red-500' : 'opacity-35'}"
                                 on:click={(e) => handleLike(e, song)}
+                                on:keydown|stopPropagation
                                 aria-label={likedIds.has(song.id) ? "Unlike" : "Like"}
                             >
                                 {#if likedIds.has(song.id)}
