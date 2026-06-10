@@ -1,4 +1,10 @@
-import { derived, get, writable } from "svelte/store";
+import {
+	derived,
+	get,
+	type Readable,
+	type Writable,
+	writable,
+} from "svelte/store";
 import { DEFAULT_API_URL } from "./constants";
 import type {
 	ColorArray,
@@ -9,25 +15,31 @@ import type {
 } from "./types";
 
 // State
-export const isExpanded = writable(false);
-export const isPlaying = writable(false);
-export const showPlaylist = writable(false);
-export const playMode = writable<PlayMode>("order");
-export const playlist = writable<Song[]>([]);
-export const currentIndex = writable(0);
-export const primaryColor = writable<ColorArray>([20, 20, 20]);
-export const currentSong = writable<Song | undefined>(undefined);
-export const progress = writable(0);
-export const duration = writable(0);
-export const currentTime = writable(0);
-export const volume = writable(0.5);
-export const likedSongs = writable<Set<string>>(new Set());
-export const errorMsg = writable<string | null>(null);
-export const isAudioLoading = writable(false);
-export const isSeeking = writable(false);
-export const audioPreconnectOrigins = derived(
+export const isExpanded: Writable<boolean> = writable(false);
+export const isPlaying: Writable<boolean> = writable(false);
+export const showPlaylist: Writable<boolean> = writable(false);
+export const playMode: Writable<PlayMode> = writable<PlayMode>("order");
+export const playlist: Writable<Song[]> = writable<Song[]>([]);
+export const currentIndex: Writable<number> = writable(0);
+export const primaryColor: Writable<ColorArray> = writable<ColorArray>([
+	20, 20, 20,
+]);
+export const currentSong: Writable<Song | undefined> = writable<
+	Song | undefined
+>(undefined);
+export const progress: Writable<number> = writable(0);
+export const duration: Writable<number> = writable(0);
+export const currentTime: Writable<number> = writable(0);
+export const volume: Writable<number> = writable(0.5);
+export const likedSongs: Writable<Set<string>> = writable<Set<string>>(
+	new Set<string>(),
+);
+export const errorMsg: Writable<string | null> = writable<string | null>(null);
+export const isAudioLoading: Writable<boolean> = writable(false);
+export const isSeeking: Writable<boolean> = writable(false);
+export const audioPreconnectOrigins: Readable<string[]> = derived(
 	[playlist, currentIndex],
-	([$playlist, $currentIndex]) => {
+	([$playlist, $currentIndex]): string[] => {
 		if ($playlist.length === 0) return [];
 
 		const origins = new Set<string>();
@@ -143,7 +155,7 @@ function setPlaylistWithSafeIndex(list: Song[]) {
 }
 
 // Actions
-export function setAudioElement(el: HTMLAudioElement) {
+export function setAudioElement(el: HTMLAudioElement): void {
 	audio = el;
 
 	// Setup MediaSession hardware/OS controls
@@ -155,31 +167,31 @@ export function setAudioElement(el: HTMLAudioElement) {
 	}
 }
 
-export function toggleExpand() {
+export function toggleExpand(): void {
 	isExpanded.update((v) => {
 		if (v) showPlaylist.set(false);
 		return !v;
 	});
 }
 
-export function togglePlaylist() {
+export function togglePlaylist(): void {
 	showPlaylist.update((v) => !v);
 }
 
-export function handleAudioWaiting() {
+export function handleAudioWaiting(): void {
 	if (get(isPlaying) || playbackIntent === "play") {
 		isAudioLoading.set(true);
 	}
 }
 
-export function handleAudioReady() {
+export function handleAudioReady(): void {
 	consecutiveAudioErrors = 0;
 	lastAudioErrorUrl = "";
 	isAudioLoading.set(false);
 	if (get(playlist).length > 0) errorMsg.set(null);
 }
 
-export function handleAudioError() {
+export function handleAudioError(): void {
 	isAudioLoading.set(false);
 
 	const failedSong = get(currentSong);
@@ -409,7 +421,7 @@ function preloadNearbyAssets(list: Song[], index: number) {
 	}
 }
 
-export function togglePlay() {
+export function togglePlay(): void {
 	if (!audio) return;
 
 	if (get(isPlaying)) {
@@ -419,7 +431,7 @@ export function togglePlay() {
 	}
 }
 
-export function setVolume(val: number) {
+export function setVolume(val: number): void {
 	volume.set(val);
 	if (audio && !fadeInterval) audio.volume = val;
 	if (typeof localStorage !== "undefined") {
@@ -427,7 +439,7 @@ export function setVolume(val: number) {
 	}
 }
 
-export function toggleMute() {
+export function toggleMute(): void {
 	const currentVol = get(volume);
 	if (currentVol > 0) {
 		setVolume(0);
@@ -436,7 +448,7 @@ export function toggleMute() {
 	}
 }
 
-export function switchPlayMode() {
+export function switchPlayMode(): void {
 	playMode.update((mode) => {
 		let newMode: PlayMode = "order";
 		if (mode === "order") newMode = "loop";
@@ -450,7 +462,7 @@ export function switchPlayMode() {
 	});
 }
 
-export function nextSong() {
+export function nextSong(): void {
 	const $playlist = get(playlist);
 	if ($playlist.length === 0) return;
 
@@ -472,7 +484,7 @@ export function nextSong() {
 	isPlaying.set(true);
 }
 
-export function prevSong() {
+export function prevSong(): void {
 	const $playlist = get(playlist);
 	if ($playlist.length === 0) return;
 
@@ -483,7 +495,7 @@ export function prevSong() {
 	isPlaying.set(true);
 }
 
-export function playSong(index: number) {
+export function playSong(index: number): void {
 	const $playlist = get(playlist);
 	if (index < 0 || index >= $playlist.length) return;
 
@@ -493,7 +505,7 @@ export function playSong(index: number) {
 }
 
 // Updated toggleLike to accept an optional song argument
-export function toggleLike(targetSong?: Song) {
+export function toggleLike(targetSong?: Song): void {
 	const $song = targetSong || get(currentSong);
 	if (!$song) return;
 
@@ -542,7 +554,7 @@ export function toggleLike(targetSong?: Song) {
 	}
 }
 
-export async function fetchPlaylist(config: MusicConfig) {
+export async function fetchPlaylist(config: MusicConfig): Promise<void> {
 	if (!config.enable) return;
 	errorMsg.set(null); // Clear previous errors
 
@@ -639,7 +651,7 @@ export async function fetchPlaylist(config: MusicConfig) {
 	}
 }
 
-export function handleAutoNext() {
+export function handleAutoNext(): void {
 	const $mode = get(playMode);
 	if ($mode === "loop") {
 		if (audio) {
@@ -651,7 +663,7 @@ export function handleAutoNext() {
 	}
 }
 
-export function initLikeStore() {
+export function initLikeStore(): void {
 	if (typeof localStorage !== "undefined") {
 		const savedLiked = localStorage.getItem("music-liked-songs");
 		if (savedLiked) {
