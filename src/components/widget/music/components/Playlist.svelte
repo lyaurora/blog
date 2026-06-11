@@ -107,7 +107,7 @@ onDestroy(clearActiveScrollTimer);
                             class="w-full flex items-center gap-3 p-2 rounded-md transition-all text-left group relative overflow-hidden cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-current/45"
                             class:bg-current-10={$currentIndex === i}
                             class:playlist-active-item={$currentIndex === i}
-                            class:hover:bg-current-5={$currentIndex !== i}
+                            class:playlist-idle-item={$currentIndex !== i}
                             role="option"
                             aria-selected={$currentIndex === i}
                             tabindex="0"
@@ -162,7 +162,7 @@ onDestroy(clearActiveScrollTimer);
 
 <style>
     .bg-current-10 { background-color: color-mix(in srgb, currentColor 10%, transparent); }
-    .bg-current-5 { background-color: color-mix(in srgb, currentColor 5%, transparent); }
+    .playlist-idle-item:hover { background-color: color-mix(in srgb, currentColor 5%, transparent); }
 
     /* 自定义滚动条 */
     .scrollbar-thin::-webkit-scrollbar {
