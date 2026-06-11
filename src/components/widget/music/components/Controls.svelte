@@ -1,13 +1,16 @@
 <script lang="ts">
+import { onDestroy } from "svelte";
 import { fade } from "svelte/transition";
 import { MODE_NAMES } from "../constants";
 import {
 	currentSong,
 	isAudioLoading,
+	isPlaylistLoading,
 	isPlaying,
 	likedSongs,
 	nextSong,
 	playMode,
+	playlist,
 	prevSong,
 	switchPlayMode,
 	toggleLike,
@@ -16,6 +19,9 @@ import {
 
 let showModeTooltip = false;
 let tooltipTimeout: number | undefined;
+$: hasSong = Boolean($currentSong);
+$: hasTracks = $playlist.length > 0;
+$: playbackDisabled = !hasSong || ($isPlaylistLoading && !hasTracks);
 
 function handleModeSwitch() {
 	switchPlayMode();
@@ -25,6 +31,10 @@ function handleModeSwitch() {
 		showModeTooltip = false;
 	}, 2000);
 }
+
+onDestroy(() => {
+	if (tooltipTimeout) clearTimeout(tooltipTimeout);
+});
 </script>
 
 <div class="flex justify-between items-center relative">
@@ -69,9 +79,10 @@ function handleModeSwitch() {
         <!-- Like Button -->
         <button 
             type="button"
-            class="text-current opacity-70 hover:text-red-400 transition p-1.5 relative group"
+            class="text-current opacity-70 hover:text-red-400 transition p-1.5 relative group disabled:opacity-35 disabled:cursor-not-allowed"
             class:text-red-500={$currentSong && $likedSongs.has($currentSong.id)}
-            on:click={toggleLike}
+            disabled={!hasSong}
+            on:click={() => toggleLike()}
             aria-label={$currentSong && $likedSongs.has($currentSong.id) ? "Unlike" : "Like"}
         >
             {#if $currentSong && $likedSongs.has($currentSong.id)}
@@ -84,16 +95,17 @@ function handleModeSwitch() {
 
     <!-- Center Group: Prev, Play, Next -->
     <div class="flex items-center gap-1">
-        <button type="button" class="text-current opacity-75 hover:opacity-100 transition p-1" on:click={prevSong} aria-label="Previous song">
+        <button type="button" class="text-current opacity-75 hover:opacity-100 transition p-1 disabled:opacity-35 disabled:cursor-not-allowed" disabled={!hasTracks} on:click={prevSong} aria-label="Previous song">
             <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" viewBox="0 0 24 24" fill="currentColor"><path d="M6 6h2v12H6zm3.5 6l8.5 6V6z"/></svg>
         </button>
         
         <button 
             type="button"
-            class="w-8 h-8 flex items-center justify-center rounded-full hover:scale-105 transition active:scale-95"
+            class="w-8 h-8 flex items-center justify-center rounded-full hover:scale-105 transition active:scale-95 disabled:opacity-45 disabled:cursor-not-allowed disabled:hover:scale-100"
             style="background: var(--player-play-bg); color: var(--player-play-icon); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); box-shadow: 0 2px 8px rgba(0,0,0,0.1), 0 4px 16px rgba(0,0,0,0.06), inset 0 1px 0 rgba(255,255,255,0.25);"
+            disabled={playbackDisabled}
             on:click={togglePlay}
-            aria-label={$isAudioLoading ? "Loading" : $isPlaying ? "Pause" : "Play"}
+            aria-label={$isPlaylistLoading && !hasTracks ? "Loading playlist" : !hasSong ? "No song available" : $isAudioLoading ? "Loading" : $isPlaying ? "Pause" : "Play"}
         >
             {#if $isAudioLoading}
                 <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 animate-spin" viewBox="0 0 24 24" fill="none">
@@ -107,7 +119,7 @@ function handleModeSwitch() {
             {/if}
         </button>
 
-        <button type="button" class="text-current opacity-75 hover:opacity-100 transition p-1" on:click={nextSong} aria-label="Next song">
+        <button type="button" class="text-current opacity-75 hover:opacity-100 transition p-1 disabled:opacity-35 disabled:cursor-not-allowed" disabled={!hasTracks} on:click={nextSong} aria-label="Next song">
                 <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" viewBox="0 0 24 24" fill="currentColor"><path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z"/></svg>
         </button>
     </div>

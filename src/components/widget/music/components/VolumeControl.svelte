@@ -1,6 +1,6 @@
 <script lang="ts">
 import { fade } from "svelte/transition";
-import { primaryColor, setVolume, volume } from "../store";
+import { primaryColor, setVolume, toggleMute, volume } from "../store";
 
 let volumeBar: HTMLDivElement;
 let isDraggingVolume = false;
@@ -14,38 +14,41 @@ $: popupShadow = isLightBackground
 	: "0 4px 8px rgba(0,0,0,0.22), 0 12px 24px rgba(0,0,0,0.26), 0 22px 44px rgba(0,0,0,0.38), inset 0 1px 0 rgba(255,255,255,0.12)";
 $: hasVolume = $volume > 0;
 
-// 音量控制逻辑
-function updateVolume(e: MouseEvent | TouchEvent) {
+function updateVolume(clientY: number) {
 	if (!volumeBar) return;
 	const rect = volumeBar.getBoundingClientRect();
-	const clientY = "touches" in e ? e.touches[0].clientY : e.clientY;
 	// Calculate from bottom
 	let percent = (rect.bottom - clientY) / rect.height;
 	percent = Math.max(0, Math.min(1, percent));
 	setVolume(percent);
 }
 
-function handleVolumeStart(e: MouseEvent | TouchEvent) {
+function handleVolumeStart(e: PointerEvent) {
+	if (e.pointerType === "mouse" && e.button !== 0) return;
+
+	e.preventDefault();
+	e.stopPropagation();
 	isDraggingVolume = true;
-	updateVolume(e);
-	window.addEventListener("mousemove", handleVolumeMove);
-	window.addEventListener("mouseup", handleVolumeEnd);
-	window.addEventListener("touchmove", handleVolumeMove);
-	window.addEventListener("touchend", handleVolumeEnd);
+	showVolume = true;
+	volumeBar?.setPointerCapture(e.pointerId);
+	updateVolume(e.clientY);
 }
 
-function handleVolumeMove(e: MouseEvent | TouchEvent) {
+function handleVolumeMove(e: PointerEvent) {
 	if (!isDraggingVolume) return;
-	updateVolume(e);
+
+	e.preventDefault();
+	updateVolume(e.clientY);
 }
 
-function handleVolumeEnd() {
+function handleVolumeEnd(e: PointerEvent) {
 	if (!isDraggingVolume) return;
+
+	e.preventDefault();
 	isDraggingVolume = false;
-	window.removeEventListener("mousemove", handleVolumeMove);
-	window.removeEventListener("mouseup", handleVolumeEnd);
-	window.removeEventListener("touchmove", handleVolumeMove);
-	window.removeEventListener("touchend", handleVolumeEnd);
+	if (volumeBar?.hasPointerCapture(e.pointerId)) {
+		volumeBar.releasePointerCapture(e.pointerId);
+	}
 }
 
 // Toggle mute is handled in store, but here we handle UI interaction
@@ -53,7 +56,7 @@ function handleVolumeClick() {
 	// Detect if device supports hover (desktop) vs touch (mobile)
 	// On touch devices, clicking the icon toggles the slider visibility
 	if (window.matchMedia("(hover: hover)").matches) {
-		import("../store").then(({ toggleMute }) => toggleMute());
+		toggleMute();
 	} else {
 		showVolume = !showVolume;
 	}
@@ -75,14 +78,15 @@ function handleVolumeClick() {
             <div class="h-28 w-8 rounded-full flex flex-col items-center justify-end pb-3 pt-3 overflow-hidden" style="background: {popupBg}; backdrop-filter: blur(36px); -webkit-backdrop-filter: blur(36px); box-shadow: {popupShadow};">
                 <div 
                     bind:this={volumeBar}
-                    class="volume-bar relative w-1.5 h-full rounded-full cursor-pointer flex flex-col justify-end overflow-visible group/slider"
-                    on:mousedown={handleVolumeStart}
-                    on:touchstart={handleVolumeStart}
-                    on:click|stopPropagation={(e) => updateVolume(e)}
+                    class="volume-bar relative w-1.5 h-full rounded-full cursor-pointer flex flex-col justify-end overflow-visible group/slider touch-none select-none"
+                    on:pointerdown={handleVolumeStart}
+                    on:pointermove={handleVolumeMove}
+                    on:pointerup={handleVolumeEnd}
+                    on:pointercancel={handleVolumeEnd}
                     role="slider"
                     tabindex="0"
                     aria-label="Volume slider"
-                    aria-valuenow={$volume * 100}
+                    aria-valuenow={Math.round($volume * 100)}
                     aria-valuemin="0"
                     aria-valuemax="100"
                     on:keydown={(e) => {

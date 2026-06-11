@@ -2,8 +2,11 @@
 import { tick } from "svelte";
 import {
 	currentSong,
+	errorMsg,
 	isExpanded,
+	isPlaylistLoading,
 	isPlaying,
+	playlist,
 	primaryColor,
 	toggleExpand,
 } from "../store";
@@ -49,6 +52,11 @@ $: isLightBackground =
 	($primaryColor[0] * 299 + $primaryColor[1] * 587 + $primaryColor[2] * 114) /
 		1000 >
 	160;
+$: coverStatus = $currentSong?.pic
+	? ""
+	: $isPlaylistLoading
+		? "正在加载歌单"
+		: $errorMsg || ($playlist.length === 0 ? "暂无可播放歌曲" : "暂无封面");
 
 async function extractColor() {
 	if (!$currentSong?.pic) return;
@@ -107,6 +115,10 @@ $: if ($currentSong) {
 		imageLoaded = false;
 		lastPic = $currentSong.pic;
 	}
+} else {
+	imageLoaded = false;
+	lastPic = null;
+	lastColorPic = null;
 }
 
 $: if ($currentSong && $isExpanded && $currentSong.pic !== lastColorPic) {
@@ -119,17 +131,27 @@ $: if ($currentSong && $isExpanded && $currentSong.pic !== lastColorPic) {
     class="relative h-44 w-full group"
     style="-webkit-mask-image: linear-gradient(to bottom, black 40%, rgba(0,0,0,0.8) 60%, transparent 100%); mask-image: linear-gradient(to bottom, black 40%, rgba(0,0,0,0.8) 60%, transparent 100%);"
 >
-    <div class="absolute inset-0 bg-gray-800 animate-pulse z-[-1]" class:hidden={imageLoaded}></div>
-    <img 
-        bind:this={coverImg}
-        src={$currentSong?.pic} 
-        alt={$currentSong?.title}  
-        class="h-full w-full object-cover transition-transform duration-700 opacity-0 transition-opacity duration-500"
-        class:scale-110={$isPlaying}
-        class:opacity-100={imageLoaded}
-        crossorigin="anonymous"
-        on:load={handleImageLoad}
-    />
+    <div class="absolute inset-0 bg-gray-800 animate-pulse z-[-1]" class:hidden={imageLoaded || !$currentSong?.pic}></div>
+    {#if $currentSong?.pic}
+        <img
+            bind:this={coverImg}
+            src={$currentSong.pic}
+            alt={$currentSong.title}
+            class="h-full w-full object-cover transition-transform duration-700 opacity-0 transition-opacity duration-500"
+            class:scale-110={$isPlaying}
+            class:opacity-100={imageLoaded}
+            crossorigin="anonymous"
+            on:load={handleImageLoad}
+        />
+    {:else}
+        <div class="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-black/20 px-5 text-center">
+            <div class="relative h-16 w-16 rounded-full bg-neutral-950/85 shadow-inner ring-1 ring-white/10">
+                <div class="absolute inset-1 rounded-full" style="background: repeating-radial-gradient(#151515 0, #151515 2px, #2a2a2a 3px, #2a2a2a 4px);"></div>
+                <div class="absolute left-1/2 top-1/2 h-5 w-5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-red-900/80 ring-2 ring-black/40"></div>
+            </div>
+            <div class="max-w-full truncate text-[11px] font-medium {isLightBackground ? 'text-neutral-900/70' : 'text-white/70'}">{coverStatus}</div>
+        </div>
+    {/if}
     
     <!-- Specular highlight -->
     <div class="absolute inset-0 bg-gradient-to-br from-white/[0.12] via-transparent to-transparent pointer-events-none z-[1]"></div>

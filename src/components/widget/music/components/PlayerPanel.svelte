@@ -3,8 +3,11 @@ import {
 	currentSong,
 	currentTime,
 	duration,
+	errorMsg,
 	isExpanded,
+	isPlaylistLoading,
 	primaryColor,
+	playlist,
 	showPlaylist,
 	toggleExpand,
 	togglePlaylist,
@@ -34,6 +37,21 @@ $: titleWeightClass = "font-semibold";
 $: artistForegroundClass = isLightBackground
 	? "text-neutral-800/75"
 	: "text-white/80";
+$: displayTitle =
+	$currentSong?.title ||
+	($isPlaylistLoading
+		? "正在加载歌单"
+		: $errorMsg
+			? "播放暂不可用"
+			: "暂无歌曲");
+$: displaySubtitle =
+	$currentSong?.author ||
+	$errorMsg ||
+	($isPlaylistLoading
+		? "连接音乐源中"
+		: $playlist.length === 0
+			? "歌单里暂时没有可播放歌曲"
+			: "");
 $: panelShadow = isLightBackground
 	? "0 4px 8px rgba(0, 0, 0, 0.05), 0 16px 32px rgba(0, 0, 0, 0.1), 0 28px 56px rgba(0, 0, 0, 0.14), inset 0 1px 0 rgba(255, 255, 255, 0.24)"
 	: "0 4px 8px rgba(0, 0, 0, 0.22), 0 16px 32px rgba(0, 0, 0, 0.28), 0 28px 56px rgba(0, 0, 0, 0.42), inset 0 1px 0 rgba(255, 255, 255, 0.12)";
@@ -62,9 +80,9 @@ $: panelShadow = isLightBackground
     <Cover />
 
     <!-- 歌曲信息（移出遮罩区域以确保可见性） -->
-    <div class="px-5 -mt-10 relative z-10 mb-2 {titleForegroundClass}" style="text-shadow: {isLightBackground ? '0 0 8px rgba(255,255,255,0.6), 0 1px 2px rgba(255,255,255,0.4)' : '0 2px 6px rgba(0,0,0,0.5), 0 0 3px rgba(0,0,0,0.2)'};">
-        <div class="text-[1.05rem] leading-6 {titleWeightClass} truncate">{$currentSong?.title}</div>
-        <div class="text-[0.72rem] leading-4 truncate mt-0.5 font-medium {artistForegroundClass}">{$currentSong?.author}</div>
+    <div class="px-5 -mt-10 relative z-10 mb-2 {titleForegroundClass}" aria-live="polite" style="text-shadow: {isLightBackground ? '0 0 8px rgba(255,255,255,0.6), 0 1px 2px rgba(255,255,255,0.4)' : '0 2px 6px rgba(0,0,0,0.5), 0 0 3px rgba(0,0,0,0.2)'};">
+        <div class="text-[1.05rem] leading-6 {titleWeightClass} truncate">{displayTitle}</div>
+        <div class="text-[0.72rem] leading-4 truncate mt-0.5 font-medium {artistForegroundClass}">{displaySubtitle}</div>
     </div>
 
     <!-- 控制区 -->

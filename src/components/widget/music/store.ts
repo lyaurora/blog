@@ -36,6 +36,7 @@ export const likedSongs: Writable<Set<string>> = writable<Set<string>>(
 );
 export const errorMsg: Writable<string | null> = writable<string | null>(null);
 export const isAudioLoading: Writable<boolean> = writable(false);
+export const isPlaylistLoading: Writable<boolean> = writable(false);
 export const isSeeking: Writable<boolean> = writable(false);
 export const audioPreconnectOrigins: Readable<string[]> = derived(
 	[playlist, currentIndex],
@@ -134,8 +135,13 @@ function sortMusicList(list: Song[], liked: Set<string>): Song[] {
 
 function setPlaylistWithSafeIndex(list: Song[]) {
 	if (list.length === 0) {
+		stopPlayback();
 		playlist.set([]);
+		currentIndex.set(0);
 		currentSong.set(undefined);
+		progress.set(0);
+		currentTime.set(0);
+		duration.set(0);
 		return;
 	}
 
@@ -147,7 +153,13 @@ function setPlaylistWithSafeIndex(list: Song[]) {
 		if (activeIndex !== -1) nextIndex = activeIndex;
 	}
 
-	if (nextIndex < 0 || nextIndex >= list.length) nextIndex = 0;
+	if (
+		!Number.isFinite(nextIndex) ||
+		nextIndex < 0 ||
+		nextIndex >= list.length
+	) {
+		nextIndex = 0;
+	}
 
 	playlist.set(list);
 	currentIndex.set(nextIndex);
@@ -209,14 +221,24 @@ export function handleAudioError(): void {
 		$playlist.length <= 1 ||
 		consecutiveAudioErrors >= MAX_AUDIO_ERROR_SKIPS
 	) {
-		isPlaying.set(false);
-		errorMsg.set("当前歌曲加载失败，请稍后再试");
+		stopPlayback("当前歌曲加载失败，请稍后再试");
 		return;
 	}
 
 	consecutiveAudioErrors++;
+	errorMsg.set(null);
 	console.warn("Audio failed, skipping to next song", failedSong.title);
 	nextSong();
+}
+
+function stopPlayback(message?: string) {
+	playbackIntent = "pause";
+	playbackRequestToken++;
+	clearFadeInterval();
+	if (audio && !audio.paused) audio.pause();
+	isPlaying.set(false);
+	isAudioLoading.set(false);
+	if (message) errorMsg.set(message);
 }
 
 function clearFadeInterval() {
@@ -423,6 +445,10 @@ function preloadNearbyAssets(list: Song[], index: number) {
 
 export function togglePlay(): void {
 	if (!audio) return;
+	if (!get(currentSong)) {
+		if (!get(isPlaylistLoading)) errorMsg.set("暂无可播放歌曲");
+		return;
+	}
 
 	if (get(isPlaying)) {
 		pauseAudio();
@@ -432,10 +458,11 @@ export function togglePlay(): void {
 }
 
 export function setVolume(val: number): void {
-	volume.set(val);
-	if (audio && !fadeInterval) audio.volume = val;
+	const safeVolume = Math.max(0, Math.min(1, Number.isFinite(val) ? val : 0.5));
+	volume.set(safeVolume);
+	if (audio && !fadeInterval) audio.volume = safeVolume;
 	if (typeof localStorage !== "undefined") {
-		localStorage.setItem("music-volume", val.toString());
+		localStorage.setItem("music-volume", safeVolume.toString());
 	}
 }
 
@@ -464,10 +491,16 @@ export function switchPlayMode(): void {
 
 export function nextSong(): void {
 	const $playlist = get(playlist);
-	if ($playlist.length === 0) return;
+	if ($playlist.length === 0) {
+		if (!get(isPlaylistLoading)) errorMsg.set("暂无可播放歌曲");
+		return;
+	}
 
 	const $mode = get(playMode);
 	const $index = get(currentIndex);
+	playbackIntent = "play";
+	clearFadeInterval();
+	errorMsg.set(null);
 
 	if ($mode === "shuffle") {
 		let newIndex = Math.floor(Math.random() * $playlist.length);
@@ -482,26 +515,38 @@ export function nextSong(): void {
 		currentIndex.set(newIndex);
 	}
 	isPlaying.set(true);
+	isAudioLoading.set(true);
 }
 
 export function prevSong(): void {
 	const $playlist = get(playlist);
-	if ($playlist.length === 0) return;
+	if ($playlist.length === 0) {
+		if (!get(isPlaylistLoading)) errorMsg.set("暂无可播放歌曲");
+		return;
+	}
 
 	const $index = get(currentIndex);
 	const newIndex = ($index - 1 + $playlist.length) % $playlist.length;
+	playbackIntent = "play";
+	clearFadeInterval();
+	errorMsg.set(null);
 	preloadNearbyAssets($playlist, newIndex);
 	currentIndex.set(newIndex);
 	isPlaying.set(true);
+	isAudioLoading.set(true);
 }
 
 export function playSong(index: number): void {
 	const $playlist = get(playlist);
 	if (index < 0 || index >= $playlist.length) return;
 
+	playbackIntent = "play";
+	clearFadeInterval();
+	errorMsg.set(null);
 	preloadNearbyAssets($playlist, index);
 	currentIndex.set(index);
 	isPlaying.set(true);
+	isAudioLoading.set(true);
 }
 
 // Updated toggleLike to accept an optional song argument
@@ -556,7 +601,15 @@ export function toggleLike(targetSong?: Song): void {
 
 export async function fetchPlaylist(config: MusicConfig): Promise<void> {
 	if (!config.enable) return;
-	errorMsg.set(null); // Clear previous errors
+	errorMsg.set(null);
+	isPlaylistLoading.set(true);
+
+	if (!config.id) {
+		setPlaylistWithSafeIndex([]);
+		errorMsg.set("未配置歌单");
+		isPlaylistLoading.set(false);
+		return;
+	}
 
 	// Try to load from cache first
 	const cacheKey = `music-playlist-${config.id}`;
@@ -579,6 +632,7 @@ export async function fetchPlaylist(config: MusicConfig): Promise<void> {
 					preloadNearbyAssets(sortedCache, get(currentIndex));
 					hasUsableCache = true;
 					shouldRefreshCache = cacheAge > PLAYLIST_BACKGROUND_REFRESH_AGE;
+					isPlaylistLoading.set(false);
 					errorMsg.set(null);
 				}
 			} catch (e) {
@@ -596,7 +650,16 @@ export async function fetchPlaylist(config: MusicConfig): Promise<void> {
 			type: config.type || "playlist",
 			id: config.id,
 		});
-		const res = await fetch(`${api}?${query.toString()}`);
+		const controller =
+			typeof AbortController !== "undefined" ? new AbortController() : null;
+		const timeoutId = controller
+			? window.setTimeout(() => controller.abort(), 12000)
+			: undefined;
+		const res = await fetch(`${api}?${query.toString()}`, {
+			signal: controller?.signal,
+		}).finally(() => {
+			if (timeoutId) window.clearTimeout(timeoutId);
+		});
 		if (!res.ok) {
 			throw new Error(`API Error: ${res.status} ${res.statusText}`);
 		}
@@ -608,24 +671,37 @@ export async function fetchPlaylist(config: MusicConfig): Promise<void> {
 
 		const $likedSongs = get(likedSongs);
 
-		const newPlaylist = data.map((item: MetingItem) => {
-			let pic = item.pic || "";
-			if (pic) {
-				pic = pic.replace(/^http:/, "https:");
-				const sizeParam = pic.includes("type=pic")
-					? "picsize=500"
-					: "param=500y500";
-				pic += pic.includes("?") ? `&${sizeParam}` : `?${sizeParam}`;
+		const newPlaylist = data
+			.map((item: MetingItem) => {
+				let pic = item.pic || "";
+				if (pic) {
+					pic = pic.replace(/^http:/, "https:");
+					const sizeParam = pic.includes("type=pic")
+						? "picsize=500"
+						: "param=500y500";
+					pic += pic.includes("?") ? `&${sizeParam}` : `?${sizeParam}`;
+				}
+				return {
+					id: String(item.id || item.url || item.title),
+					title: item.title,
+					author: item.author,
+					url: item.url,
+					pic: pic,
+					lrc: item.lrc,
+				};
+			})
+			.filter(
+				(song: Song) =>
+					Boolean(song.id) && Boolean(song.title) && Boolean(song.url),
+			);
+
+		if (newPlaylist.length === 0) {
+			if (!hasUsableCache) {
+				setPlaylistWithSafeIndex([]);
+				errorMsg.set("歌单里暂无可播放歌曲");
 			}
-			return {
-				id: String(item.id || item.url),
-				title: item.title,
-				author: item.author,
-				url: item.url,
-				pic: pic,
-				lrc: item.lrc,
-			};
-		});
+			return;
+		}
 
 		const sortedPlaylist = sortMusicList(newPlaylist, $likedSongs);
 		setPlaylistWithSafeIndex(sortedPlaylist);
@@ -646,8 +722,14 @@ export async function fetchPlaylist(config: MusicConfig): Promise<void> {
 	} catch (e) {
 		console.error("Failed to fetch playlist", e);
 		if (!hasUsableCache) {
-			errorMsg.set("加载歌单失败，请检查网络设置");
+			const message =
+				e instanceof DOMException && e.name === "AbortError"
+					? "加载歌单超时，请稍后再试"
+					: "加载歌单失败，请检查网络设置";
+			errorMsg.set(message);
 		}
+	} finally {
+		isPlaylistLoading.set(false);
 	}
 }
 
@@ -656,7 +738,10 @@ export function handleAutoNext(): void {
 	if ($mode === "loop") {
 		if (audio) {
 			audio.currentTime = 0;
-			audio.play();
+			audio.play().catch((e) => {
+				console.error("Loop playback failed", e);
+				handleAudioError();
+			});
 		}
 	} else {
 		nextSong();
@@ -675,7 +760,7 @@ export function initLikeStore(): void {
 		}
 		const savedVolume = localStorage.getItem("music-volume");
 		if (savedVolume) {
-			volume.set(Number(savedVolume));
+			setVolume(Number(savedVolume));
 		}
 
 		const savedPlayMode = localStorage.getItem("music-play-mode");
@@ -688,7 +773,10 @@ export function initLikeStore(): void {
 		// Restore current index
 		const savedIndex = localStorage.getItem("music-current-index");
 		if (savedIndex) {
-			currentIndex.set(Number(savedIndex));
+			const parsedIndex = Number(savedIndex);
+			if (Number.isInteger(parsedIndex) && parsedIndex >= 0) {
+				currentIndex.set(parsedIndex);
+			}
 		}
 	}
 }

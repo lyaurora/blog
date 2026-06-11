@@ -1,9 +1,11 @@
 <script lang="ts">
+import { onDestroy } from "svelte";
 import { flip } from "svelte/animate";
 import { slide } from "svelte/transition";
 import {
 	currentIndex,
 	errorMsg,
+	isPlaylistLoading,
 	isPlaying,
 	likedSongs,
 	playlist,
@@ -14,6 +16,7 @@ import {
 import type { Song } from "../types";
 
 export let isLightBackground = false;
+let activeScrollTimer: number | undefined;
 
 async function handlePlaySong(index: number) {
 	playSong(index);
@@ -33,16 +36,33 @@ function handleSongKeydown(e: KeyboardEvent, index: number) {
 // Ensure reactivity for the set usage in loop
 $: likedIds = $likedSongs;
 
-// Auto-scroll to active item when playlist is shown
-$: if ($showPlaylist) {
-	// Wait for transition to complete mostly
-	setTimeout(() => {
-		const activeItem = document.querySelector(".playlist-active-item");
-		if (activeItem) {
-			activeItem.scrollIntoView({ behavior: "smooth", block: "center" });
-		}
+function clearActiveScrollTimer() {
+	if (activeScrollTimer) {
+		window.clearTimeout(activeScrollTimer);
+		activeScrollTimer = undefined;
+	}
+}
+
+function scheduleActiveScroll(index: number) {
+	clearActiveScrollTimer();
+	activeScrollTimer = window.setTimeout(() => {
+		if (!$showPlaylist || $currentIndex !== index) return;
+		const activeItem = document.querySelector<HTMLElement>(
+			".music-player-container .playlist-active-item",
+		);
+		activeItem?.scrollIntoView({ behavior: "smooth", block: "center" });
+		activeScrollTimer = undefined;
 	}, 250);
 }
+
+// Auto-scroll to active item when playlist is shown or the active song changes.
+$: if ($showPlaylist && $playlist.length > 0) {
+	scheduleActiveScroll($currentIndex);
+} else {
+	clearActiveScrollTimer();
+}
+
+onDestroy(clearActiveScrollTimer);
 </script>
 
 {#if $showPlaylist}
@@ -63,14 +83,22 @@ $: if ($showPlaylist) {
         </div>
         
         <div class="flex-1 overflow-y-auto scrollbar-thin p-1 space-y-0.5 relative" class:scrollbar-light={isLightBackground}>
-            {#if $errorMsg}
+            {#if $isPlaylistLoading && $playlist.length === 0}
+                <div class="absolute inset-0 flex flex-col items-center justify-center opacity-60 p-4 text-center">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-7 h-7 mb-2 animate-spin opacity-60" viewBox="0 0 24 24" fill="none">
+                        <circle class="opacity-25" cx="12" cy="12" r="9" stroke="currentColor" stroke-width="3"></circle>
+                        <path class="opacity-85" fill="currentColor" d="M21 12a9 9 0 0 0-9-9v3a6 6 0 0 1 6 6h3z"></path>
+                    </svg>
+                    <p class="text-xs">正在加载歌单</p>
+                </div>
+            {:else if $errorMsg}
                 <div class="absolute inset-0 flex flex-col items-center justify-center opacity-65 p-4 text-center">
                     <svg xmlns="http://www.w3.org/2000/svg" class="w-8 h-8 mb-2 opacity-50" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
                     <p class="text-xs">{$errorMsg}</p>
                 </div>
             {:else if $playlist.length === 0}
                 <div class="absolute inset-0 flex flex-col items-center justify-center opacity-45 p-4 text-center">
-                    <p class="text-xs">暂无歌曲</p>
+                    <p class="text-xs">暂无可播放歌曲</p>
                 </div>
             {:else}
                 {#each $playlist as song, i (song.id)}
